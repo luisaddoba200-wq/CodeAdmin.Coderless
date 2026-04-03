@@ -12295,3 +12295,188 @@ end)()
 	print("╚══════════════════════════════════════════════════════════════════╝")
 
 end)()
+-- ════════════════════════════════════════════════════════════════════
+--  v3.24 — PLUG & PLAY: AUTO-CREACIÓN Y AUTO-INSERCIÓN EN "Infeccion"
+--
+--  Pega este bloque AL PRINCIPIO de todo el script, antes de
+--  cualquier otra cosa (incluso antes de local TweenService...).
+--
+--  Qué hace:
+--  ✦ Si el script YA vive dentro de una BasePart llamada "Infeccion"
+--    → no hace nada, arranca normalmente.
+--  ✦ Si el script está en otro lado (ServerScriptService, workspace, etc.)
+--    → busca una Part "Infeccion" existente.
+--      - Si la encuentra → se mete dentro.
+--      - Si NO la encuentra → crea la Part en el centro del mapa
+--        con animación de aparición, luego se mete dentro.
+--  ✦ Después de re-parentar el script, la ejecución continúa
+--    en el nuevo contexto sin necesidad de reiniciar.
+-- ════════════════════════════════════════════════════════════════════
+;(function()
+
+	-- ── ¿Ya estamos dentro de una Part "Infeccion"? ──────────────────
+	if script.Parent and script.Parent:IsA("BasePart")
+		and script.Parent.Name == "Infeccion" then
+		-- Todo bien, ya estamos en su sitio
+		print("[Pibby|v3.24] ✔ Script ya dentro de 'Infeccion' — arranque directo")
+		return
+	end
+
+	-- ── Busca o crea la Part ──────────────────────────────────────────
+	local infPart = workspace:FindFirstChild("Infeccion")
+
+	if infPart and infPart:IsA("BasePart") then
+		-- Ya existe en el workspace pero el script no está dentro
+		print("[Pibby|v3.24] 🔍 'Infeccion' encontrada — insertando script")
+	else
+		-- No existe: la creamos con animación de aparición
+		print("[Pibby|v3.24] ⚙  Creando Part 'Infeccion' automáticamente...")
+
+		infPart = Instance.new("Part")
+		infPart.Name        = "Infeccion"
+		infPart.Anchored    = true
+		infPart.CanCollide  = false
+		infPart.CastShadow  = false
+		infPart.Shape       = Enum.PartType.Block
+		infPart.Size        = Vector3.new(4, 4, 4)
+		infPart.Material    = Enum.Material.Neon
+		infPart.Color       = Color3.fromRGB(255, 0, 255)
+		infPart.Transparency= 1   -- empieza invisible
+
+		-- ── Posición inteligente ──────────────────────────────────────
+		-- Intenta aterrizar sobre el suelo del mapa usando un raycast.
+		-- Si no hay suelo, usa 0,5,0 como fallback.
+		local groundRay = workspace:Raycast(
+			Vector3.new(0, 200, 0),
+			Vector3.new(0, -1, 0) * 400,
+			(function()
+				local rp = RaycastParams.new()
+				rp.FilterType = Enum.RaycastFilterType.Exclude
+				rp.FilterDescendantsInstances = {}
+				return rp
+			end)()
+		)
+
+		if groundRay then
+			infPart.Position = groundRay.Position + Vector3.new(0, 2.5, 0)
+		else
+			infPart.Position = Vector3.new(0, 5, 0)
+		end
+
+		infPart.Parent = workspace
+
+		-- ── Animación de aparición (sin TweenService aún disponible) ──
+		-- Usamos un loop manual porque TweenService todavía no está
+		-- declarado en este punto del script.
+		local TS = game:GetService("TweenService")
+
+		-- Flash inicial
+		local flash = Instance.new("Part")
+		flash.Anchored=true; flash.CanCollide=false; flash.CastShadow=false
+		flash.Shape=Enum.PartType.Ball; flash.Size=Vector3.new(0.5,0.5,0.5)
+		flash.Position=infPart.Position; flash.Color=Color3.fromRGB(255,0,255)
+		flash.Material=Enum.Material.Neon; flash.Transparency=0
+		flash.Parent=workspace
+
+		local li=Instance.new("PointLight")
+		li.Color=Color3.fromRGB(255,0,255); li.Range=0; li.Brightness=12; li.Parent=flash
+
+		-- Expansión del flash
+		TS:Create(flash, TweenInfo.new(0.6, Enum.EasingStyle.Sine), {
+			Size        = Vector3.new(18,18,18),
+			Transparency= 1
+		}):Play()
+		TS:Create(li, TweenInfo.new(0.5), {Range=50, Brightness=0}):Play()
+
+		-- Aparece la Part "Infeccion"
+		task.delay(0.15, function()
+			TS:Create(infPart, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Transparency = 0
+			}):Play()
+
+			-- Pulso de luz en la Part
+			local pLi=Instance.new("PointLight")
+			pLi.Color=Color3.fromRGB(255,0,255); pLi.Range=30; pLi.Brightness=5
+			pLi.Parent=infPart
+			TS:Create(pLi, TweenInfo.new(2), {Brightness=0.8, Range=12}):Play()
+		end)
+
+		-- Limpia el flash tras la animación
+		task.delay(0.7, function()
+			if flash then flash:Destroy() end
+		end)
+
+		-- BillboardGui de aviso flotante sobre la Part
+		task.delay(0.2, function()
+			if not (infPart and infPart.Parent) then return end
+			local bb = Instance.new("BillboardGui")
+			bb.Size = UDim2.new(0,200,0,40)
+			bb.StudsOffset = Vector3.new(0,4,0)
+			bb.AlwaysOnTop = true
+			bb.Parent = infPart
+
+			local lbl = Instance.new("TextLabel")
+			lbl.Size = UDim2.new(1,0,1,0)
+			lbl.BackgroundTransparency = 1
+			lbl.Text = "◈ INFECCIÓN CREADA ◈"
+			lbl.TextColor3 = Color3.fromRGB(255,0,255)
+			lbl.TextSize = 18
+			lbl.Font = Enum.Font.GothamBold
+			lbl.TextStrokeTransparency = 0.3
+			lbl.TextTransparency = 1
+			lbl.Parent = bb
+
+			TS:Create(lbl, TweenInfo.new(0.4), {TextTransparency=0}):Play()
+			task.delay(3, function()
+				TS:Create(lbl, TweenInfo.new(0.8), {TextTransparency=1}):Play()
+				task.delay(0.9, function()
+					if bb then bb:Destroy() end
+				end)
+			end)
+		end)
+
+		task.wait(0.25)   -- pequeña pausa para que la Part esté lista
+
+		print(string.format(
+			"[Pibby|v3.24] ✔ Part 'Infeccion' creada en (%.1f, %.1f, %.1f)",
+			infPart.Position.X, infPart.Position.Y, infPart.Position.Z))
+	end
+
+	-- ── Inserta el script dentro de la Part ──────────────────────────
+	-- Nota: en Roblox, re-parentar un Script que YA ESTÁ CORRIENDO
+	-- es válido en el servidor. El script continúa ejecutándose
+	-- normalmente desde donde estaba.
+	local ok, err = pcall(function()
+		script.Parent = infPart
+	end)
+
+	if ok then
+		print("[Pibby|v3.24] ✔ Script insertado dentro de 'Infeccion' — continuando")
+	else
+		-- Si el re-parent falla (permisos, etc.), el script sigue corriendo
+		-- desde su posición original. El resto del código usa getOrigin()
+		-- que ya maneja este caso.
+		warn("[Pibby|v3.24] ⚠ No se pudo re-parentar el script: "..tostring(err))
+		warn("[Pibby|v3.24]   El script continuará desde su posición original")
+	end
+
+	-- ── Renombra el script para claridad (opcional) ───────────────────
+	pcall(function()
+		if script.Name ~= "Infeccion" and script.Name ~= "Scripteless" then
+			script.Name = "PibbyCore"
+		end
+	end)
+
+	print("╔══════════════════════════════════════════════════════════════════╗")
+	print("║  PIBBY v3.24 — PLUG & PLAY                                     ║")
+	if script.Parent == infPart then
+		print("║  ✔ Script dentro de 'Infeccion' — listo para correr             ║")
+	else
+		print("║  ⚠ Script fuera de 'Infeccion' — usando getOrigin() como proxy  ║")
+	end
+	print("║  Posición del núcleo: "..string.format(
+		"(%.0f, %.0f, %.0f)",
+		infPart.Position.X, infPart.Position.Y, infPart.Position.Z).."                     ║")
+	print("╚══════════════════════════════════════════════════════════════════╝")
+
+end)()
