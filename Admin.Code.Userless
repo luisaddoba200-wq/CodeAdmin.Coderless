@@ -12480,3 +12480,352 @@ end)()
 	print("╚══════════════════════════════════════════════════════════════════╝")
 
 end)()
+-- ════════════════════════════════════════════════════════════════════
+--  v3.25 — OPTIMIZACIÓN: CONTROL DE LUCES + FIX DE BLOBS GIGANTES
+--
+--  ✦ [TODOS LOS MODOS] Fix blobs oscuros enormes en Fase 3+
+--  ✦ [TODOS LOS MODOS] Sistema de reciclaje automático de partes
+--  ✦ [SURV] Sin PointLights en tendrils, blobs ni nódulos
+--  ✦ [SURV] Bioluminiscencia solo cada 5 minutos
+--  ✦ [SURV] Luces de esporas se desvanecen al aterrizar
+--  ✦ [SURV] spawnFlash sin PointLight permanente (destello breve)
+-- ════════════════════════════════════════════════════════════════════
+;(function()
+
+	local SURV = CFG.SurvivalistMode == true
+
+	-- ════════════════════════════════════════════════════════════════
+	--  BLOQUE 1 (TODOS LOS MODOS): FIX DE BLOBS GIGANTES
+	--
+	--  Problema: en Fase 3+ spawnCorruptionCluster y spawnBlob
+	--  pueden generar esferas muy grandes porque:
+	--  1. crad llega hasta 8 studs en spawnCorruptionCluster
+	--  2. pressure_burst usa radius*0.08 * presión que puede dispararse
+	--  3. En Fase 3+ se llaman con ageFrac alto → rD() + grande
+	--
+	--  Solución: caps duros por tipo de nodo y por fase.
+	-- ════════════════════════════════════════════════════════════════
+
+	-- Límites máximos de radio según fase y tipo
+	local function maxBlobRadius(ageFrac)
+		-- En fases altas los blobs oscuros (ageFrac > 0.42) se limitarán
+		-- para evitar las esferas enormes negras
+		if currentPhase >= 3 then
+			if ageFrac and ageFrac > 0.42 then
+				return 1.8   -- blobs oscuros: máx 1.8 studs en fase 3+
+			end
+			return 2.5       -- blobs normales: igual que BlobRadMax
+		elseif currentPhase >= 2 then
+			if ageFrac and ageFrac > 0.42 then
+				return 2.2
+			end
+			return CFG.BlobRadMax
+		end
+		return CFG.BlobRadMax
+	end
+
+	-- Override de spawnBlob para aplicar el cap de tamaño
+	local _v325SpawnBlob = spawnBlob
+	function spawnBlob(pos, normal, radius, ageFrac)
+		-- Aplica el límite de radio según fase
+		local cap = maxBlobRadius(ageFrac)
+		if radius and radius > cap then
+			radius = cap
+		end
+		-- También limita el mínimo para no dejar blobs invisiblemente pequeños
+		if radius then
+			radius = math.max(CFG.BlobRadMin, radius)
+		end
+		return _v325SpawnBlob(pos, normal, radius, ageFrac)
+	end
+
+	-- Override de spawnCorruptionCluster para limitar crad en fases altas
+	-- (no podemos tocar la función directamente, pero podemos hookear
+	--  spawnBlob que es lo que usa internamente — ya hecho arriba)
+	-- Adicionalmente: limita el radio de los satélites del cluster
+	-- sobreescribiendo la lógica de clusterScanT indirectamente
+	-- mediante un flag de radio máximo global.
+
+	-- ════════════════════════════════════════════════════════════════
+	--  BLOQUE 2 (TODOS LOS MODOS): RECICLAJE AUTOMÁTICO DE PARTES
+	--
+	--  Cuando partCount supera el 72% de MaxParts, el sistema
+	--  empieza a disolver silenciosamente los blobs más antiguos
+	--  (los primeros en blobReg). Así el micelio siempre tiene
+	--  margen para crecer sin chocar con el límite duro.
+	-- ════════════════════════════════════════════════════════════════
+
+	local RECYCLE_THRESHOLD = 0.72   -- empieza a reciclar al 72% del límite
+	local RECYCLE_RATE      = 0.5    -- segundos entre reciclajes
+	local recycleTimer      = 0
+	local recycledTotal     = 0
+
+	-- Busca y disuelve la Part de micelio más antigua del folder
+	local function recycleOldestPart()
+		-- Recorre los primeros elementos del folder (los más viejos)
+		for _, child in ipairs(folder:GetChildren()) do
+			if child:IsA("BasePart")
+				and child.Name ~= "HunterSensor"
+				and child.Anchored
+				and child.Transparency < 0.9 then
+
+				-- Disuelve suavemente
+				local ts = game:GetService("TweenService")
+				ts:Create(child, TweenInfo.new(0.8, Enum.EasingStyle.Sine), {
+					Transparency = 1,
+					Size = child.Size * 0.4
+				}):Play()
+
+				task.delay(0.85, function()
+					if child and child.Parent then
+						child:Destroy()
+						partCount = math.max(0, partCount - 1)
+						recycledTotal += 1
+					end
+				end)
+				return   -- solo 1 por tick
+			end
+		end
+	end
+
+	RunService.Heartbeat:Connect(function(dt)
+		if not infectionReady then return end
+		recycleTimer += dt
+		if recycleTimer < RECYCLE_RATE then return end
+		recycleTimer = 0
+
+		local threshold = math.floor(CFG.MaxParts * RECYCLE_THRESHOLD)
+		if partCount > threshold then
+			local excess = partCount - threshold
+			-- Recicla más rápido cuanto más cerca del límite
+			local batchSize = math.min(math.ceil(excess / 100), 5)
+			for _ = 1, batchSize do
+				recycleOldestPart()
+			end
+		end
+	end)
+
+	-- ════════════════════════════════════════════════════════════════
+	--  BLOQUE 3 (SOLO SURVIVALIST): CONTROL DE LUCES
+	-- ════════════════════════════════════════════════════════════════
+
+	if not SURV then
+		print("╔══════════════════════════════════════════════════════════════════╗")
+		print("║  PIBBY v3.25 — OPTIMIZACIÓN                                     ║")
+		print("║  ✦ Fix blobs gigantes en Fase 3+ (cap de radio por fase)        ║")
+		print("║  ✦ Reciclaje automático al superar 72%% del límite de partes    ║")
+		print("║  [Modo Survivalist desactivado — sin más cambios]               ║")
+		print("╚══════════════════════════════════════════════════════════════════╝")
+		return
+	end
+
+	-- ── 3A: spawnBlob SIN PointLight en modo Survivalist ─────────────
+	local _v325SurvSpawnBlob = spawnBlob
+	function spawnBlob(pos, normal, radius, ageFrac)
+		-- Llama al blob ya con el cap aplicado (heredado del bloque 1)
+		local p = _v325SurvSpawnBlob(pos, normal, radius, ageFrac)
+		if not p then return p end
+
+		-- Elimina cualquier PointLight que el blob haya creado
+		task.defer(function()
+			if not (p and p.Parent) then return end
+			for _, child in ipairs(p:GetChildren()) do
+				if child:IsA("PointLight") then
+					child:Destroy()
+				end
+			end
+		end)
+		return p
+	end
+
+	-- ── 3B: spawnTendril SIN PointLight en modo Survivalist ──────────
+	local _v325SurvSpawnTendril = spawnTendril
+	function spawnTendril(from, to, sn, age, isNeon, isRhizo)
+		local p = _v325SurvSpawnTendril(from, to, sn, age, isNeon, isRhizo)
+		if not p then return p end
+
+		task.defer(function()
+			if not (p and p.Parent) then return end
+			for _, child in ipairs(p:GetChildren()) do
+				if child:IsA("PointLight") then
+					child:Destroy()
+				end
+			end
+		end)
+		return p
+	end
+
+	-- ── 3C: spawnFlash SIN PointLight permanente ─────────────────────
+	-- En Survivalist el flash sigue siendo visible (es una Part que
+	-- se expande), pero sin luz de punto. Así sigue siendo visible
+	-- pero no afecta al rendimiento de red.
+	local _v325SurvSpawnFlash = spawnFlash
+	function spawnFlash(pos, normal, scale)
+		if partCount >= CFG.MaxParts then return end
+		scale = scale or 1
+
+		local p = Instance.new("Part")
+		p.Anchored=true; p.CanCollide=false; p.CastShadow=false
+		p.Shape=Enum.PartType.Ball
+		p.Size=Vector3.new(0.35,0.35,0.35)*scale
+		p.Position=pos+normal*0.35
+		p.Color=rN(); p.Material=Enum.Material.Neon; p.Transparency=0
+		p.Parent=folder; partCount+=1
+
+		-- Sin PointLight — solo la Part visual
+		TweenService:Create(p,TweenInfo.new(0.22),{
+			Size=Vector3.new(4.5,4.5,4.5)*scale,
+			Transparency=1
+		}):Play()
+		task.delay(0.26,function()
+			if p then p:Destroy(); partCount=math.max(0,partCount-1) end
+		end)
+	end
+
+	-- ── 3D: BIOLUMINISCENCIA CADA 5 MINUTOS ──────────────────────────
+	-- La bioluminiscencia original corre cada BioInterval = 4 segundos.
+	-- En Survivalist la mantenemos pero con intervalo de 300s (5 min).
+	-- Los pulsos morados siguen siendo visibles porque son cambios de
+	-- color en Parts existentes, NO nuevas luces.
+
+	local BIO_SURV_INTERVAL = 300   -- 5 minutos
+	local bioSurvTimer      = 0
+	local bioSurvReady      = true  -- permite el primer pulso al arrancar
+
+	-- Desactiva el heartbeat de bioluminiscencia original reemplazando
+	-- la función tickBioLum por una versión con intervalo extendido.
+	local _v325OrigTickBioLum = tickBioLum
+	function tickBioLum(dt)
+		-- En Survivalist: ignoramos el timer original (bioTimer / BioInterval)
+		-- y usamos nuestro propio contador de 5 minutos.
+		bioSurvTimer += dt
+
+		if bioSurvReady or bioSurvTimer >= BIO_SURV_INTERVAL then
+			bioSurvReady  = false
+			bioSurvTimer  = 0
+
+			-- Dispara el pulso (usa bioLumReg existente, sin crear luces nuevas)
+			if #blobReg > 0 then
+				local origin = blobReg[math.random(#blobReg)].pos
+				triggerBioPulse(origin)
+				print("[Pibby|v3.25|Surv] 💜 Pulso de bioluminiscencia (próximo en 5 min)")
+			end
+		end
+		-- NO llama a _v325OrigTickBioLum para evitar el pulso cada 4s
+	end
+
+	-- ── 3E: LUCES DE ESPORAS QUE SE DESVANECEN ───────────────────────
+	-- Las esporas ya generan una PointLight al spawnearse.
+	-- Nos aseguramos de que esa luz SIEMPRE se desvanezca y destruya
+	-- al aterrizar la espora (o antes).
+	-- Hook en updateSpores: cuando una espora aterriza, su luz muere.
+
+	-- Interceptamos la creación de esporas para garantizar el fade-out
+	local _v325OrigLaunchSpore = launchSpore
+	function launchSpore(fromPos, fromNormal)
+		_v325OrigLaunchSpore(fromPos, fromNormal)
+
+		-- La espora recién creada es el último elemento de `spores`
+		local s = spores[#spores]
+		if not s then return end
+		if not (s.part and s.part.Parent) then return end
+
+		-- Asegura que la luz de la espora tenga un fade-out programado
+		local li = s.light
+		if li and li.Parent then
+			-- Fade gradual durante el vuelo
+			local flightTime = s.flightTime or CFG.SporeFlightMax
+			task.spawn(function()
+				-- Empieza brillante, va bajando
+				local t0 = tick()
+				while li and li.Parent and s.part and s.part.Parent do
+					local elapsed = tick() - t0
+					local frac    = math.clamp(elapsed / flightTime, 0, 1)
+					-- Fade: 1.2 → 0 durante el vuelo
+					li.Brightness = math.max(0, 1.2 * (1 - frac))
+					li.Range      = math.max(0, 7 * (1 - frac * 0.7))
+					if frac >= 1 then break end
+					task.wait(0.08)
+				end
+				-- Destruye la luz al aterrizar
+				task.delay(0.05, function()
+					if li and li.Parent then li:Destroy() end
+				end)
+			end)
+		end
+	end
+
+	-- ── 3F: LIMPIAR LUCES QUE OTROS SISTEMAS PUEDAN CREAR ────────────
+	-- Vigilancia pasiva: cada 8 segundos elimina PointLights huérfanas
+	-- que hayan quedado en partes del folder del micelio.
+	local lightCleanT = 0
+	RunService.Heartbeat:Connect(function(dt)
+		lightCleanT += dt
+		if lightCleanT < 8 then return end
+		lightCleanT = 0
+
+		local removed = 0
+		for _, child in ipairs(folder:GetDescendants()) do
+			if child:IsA("PointLight") then
+				-- Permite solo luces con muy poca vida (brightness < 0.3)
+				-- que ya casi han desaparecido — las destruye antes
+				if child.Brightness <= 0.3 then
+					child:Destroy()
+					removed += 1
+				elseif child.Brightness > 0.3 then
+					-- Fuerza un fade hacia 0 en 1 segundo
+					TweenService:Create(child, TweenInfo.new(1.0), {
+						Brightness = 0,
+						Range      = 0
+					}):Play()
+					task.delay(1.05, function()
+						if child and child.Parent then child:Destroy() end
+					end)
+					removed += 1
+				end
+			end
+		end
+		if removed > 0 then
+			print(string.format("[Pibby|v3.25|Surv] 🔦 %d luces eliminadas", removed))
+		end
+	end)
+
+	-- ── 3G: SIN LUCES EN SISTEMAS SECUNDARIOS ────────────────────────
+	-- Algunos sistemas (clusters, rizomorfos, frutos) crean PointLights.
+	-- En Survivalist, cualquier Part nueva que entre al folder sin
+	-- ser un HunterSensor pierde sus PointLights inmediatamente.
+
+	folder.DescendantAdded:Connect(function(obj)
+		if not SURV then return end
+		if obj:IsA("PointLight") then
+			-- Permite solo si su padre es una espora en vuelo
+			-- (las esporas tienen el fade ya programado en 3E)
+			local parent = obj.Parent
+			if parent and parent.Name == "PibbySpore" then return end
+
+			-- Todo lo demás: fade rápido y destruir
+			TweenService:Create(obj, TweenInfo.new(0.5), {
+				Brightness = 0, Range = 0
+			}):Play()
+			task.delay(0.55, function()
+				if obj and obj.Parent then obj:Destroy() end
+			end)
+		end
+	end)
+
+	print("╔══════════════════════════════════════════════════════════════════╗")
+	print("║  PIBBY v3.25 — OPTIMIZACIÓN COMPLETA                           ║")
+	print("║  [Todos los modos]                                              ║")
+	print("║  ✦ Blobs oscuros gigantes — cap de radio por fase              ║")
+	print("║    Fase 3+: blobs oscuros ≤ 1.8 studs, normales ≤ 2.5         ║")
+	print("║  ✦ Reciclaje automático de partes viejas al 72%% del límite   ║")
+	print("║    → el micelio siempre tiene margen para expandirse           ║")
+	print("║  [Solo Survivalist]                                             ║")
+	print("║  ✦ Sin PointLights en blobs, tendrils, nódulos ni clusters     ║")
+	print("║  ✦ spawnFlash sin luz de punto — solo partícula visual         ║")
+	print("║  ✦ Bioluminiscencia cada 5 min (pulsos morados conservados)    ║")
+	print("║  ✦ Luces de esporas se desvanecen durante el vuelo             ║")
+	print("║  ✦ Vigilancia pasiva: elimina luces residuales cada 8s        ║")
+	print("╚══════════════════════════════════════════════════════════════════╝")
+
+end)()
