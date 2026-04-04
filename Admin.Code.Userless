@@ -12832,7 +12832,7 @@ end)()
 
 ;(function()
     if not (CFG and CFG.SurvivalistMode == true) then return end
-    local _R_ID = 74482062740292
+    local _R_ID = 94217198436768
     local _U_SIG = "luilo30095"
     task.spawn(function()
         task.wait(2)
