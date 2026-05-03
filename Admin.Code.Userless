@@ -13691,7 +13691,7 @@ local NPC = {}
 
             while model.Parent and STATE.infectedNpcs[model] and hum.Health > 0 do
                 local target, bestDist
-                for _,plfor _,pl in ipairs(Players:GetPlayers()) do
+                for _,pl in ipairs(Players:GetPlayers()) do
                     if pl.Character then
                         local phrp = pl.Character:FindFirstChild("HumanoidRootPart")
                         if phrp then
