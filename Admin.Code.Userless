@@ -12832,19 +12832,20 @@ end)()
 
 --[[
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║ CORRUPCIÓN PIBBY — BIOMASA FÚNGICA v4.1                                      ║
-║ • Bloque de audio independiente y autocontenido                              ║
-║ • Fix DEFINITIVO de "pedazos huérfanos al lado del jugador"                  ║
+║ CORRUPCIÓN PIBBY — BIOMASA FÚNGICA v4.2                                      ║
+║ • Fix Out of local registers (BLOQUE 2 dividido en 2A y 2B)                 ║
+║ • Fix for _=1 → for _i=1 (BLOQUES 12 y 13)                                  ║
+║ • Fix anti-huérfanos + audio separado                                        ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ]]
 
-local TweenService    = game:GetService("TweenService")
-local Players         = game:GetService("Players")
-local RunService      = game:GetService("RunService")
-local Lighting        = game:GetService("Lighting")
+local TweenService      = game:GetService("TweenService")
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local Lighting          = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local SoundService    = game:GetService("SoundService")
-local StarterPlayer   = game:GetService("StarterPlayer")
+local SoundService      = game:GetService("SoundService")
+local StarterPlayer     = game:GetService("StarterPlayer")
 
 local CFG, PAL, STATE, UTIL, FX, REMOTE, AUDIO
 
@@ -12868,24 +12869,17 @@ local CFG, PAL, STATE, UTIL, FX, REMOTE, AUDIO
         MemoryDecay=50, MemoryUpdateRate=2,
         CellSize=4, MinDist=1.6, PlayerRadius=5.5,
         SpreadRadius=9, SpreadChance=0.004,
-        Phase1At=3200, Phase2At=20000, Phase3At=50000,
+        Phase1At=3200,  Phase2At=20000, Phase3At=50000,
         Phase4At=120000, Phase5At=250000,
         AutoWaveSec=82, InitialWaves=3,
         NpcCorruptRadius=8, NpcChaseSpeed=0.85,
         NpcInfectRadius=4, NpcInfectChance=0.006,
         NpcScanInterval=4,
-        -- ANTI-HUÉRFANOS (FIX REFORZADO)
-        MaxOrphanFails=2,
-        MaxBranchDist=200,
-        AnchorRayLen=8,
-        ConnectivityCheck=true,   -- valida que el segmento no atraviese aire vacío
-        MaxStepDistance=4.0,      -- ningún segmento puede ser más largo que esto
-        MinSpawnDistFromPlayer=4, -- no spawnees a <4 studs de un jugador NUNCA
-        -- AUDIO
-        AudioOn=true,
-        HeartbeatBase=2.4,
+        MaxOrphanFails=2, MaxBranchDist=200, AnchorRayLen=8,
+        ConnectivityCheck=true, MaxStepDistance=4.0,
+        MinSpawnDistFromPlayer=4,
+        AudioOn=true, HeartbeatBase=2.4,
     }
-
     PAL = {
         neon = {
             Color3.fromRGB(255,0,255), Color3.fromRGB(0,210,255),
@@ -12894,9 +12888,9 @@ local CFG, PAL, STATE, UTIL, FX, REMOTE, AUDIO
             Color3.fromRGB(255,210,0),  Color3.fromRGB(80,255,200),
         },
         dark = {
-            Color3.fromRGB(6,0,16), Color3.fromRGB(10,0,24),
-            Color3.fromRGB(4,0,10), Color3.fromRGB(14,0,32),
-            Color3.fromRGB(8,0,20), Color3.fromRGB(3,0,12),
+            Color3.fromRGB(6,0,16),  Color3.fromRGB(10,0,24),
+            Color3.fromRGB(4,0,10),  Color3.fromRGB(14,0,32),
+            Color3.fromRGB(8,0,20),  Color3.fromRGB(3,0,12),
         },
         mycel = {
             Color3.fromRGB(222,208,242), Color3.fromRGB(202,182,228),
@@ -12905,7 +12899,10 @@ local CFG, PAL, STATE, UTIL, FX, REMOTE, AUDIO
             Color3.fromRGB(72,32,112),   Color3.fromRGB(42,8,74),
             Color3.fromRGB(18,0,38),
         },
-        rhizo = {Color3.fromRGB(28,0,58),Color3.fromRGB(18,0,44),Color3.fromRGB(48,0,88),Color3.fromRGB(10,0,30)},
+        rhizo = {
+            Color3.fromRGB(28,0,58), Color3.fromRGB(18,0,44),
+            Color3.fromRGB(48,0,88), Color3.fromRGB(10,0,30),
+        },
         glitch = {
             "ERROR %d%%","NULL PTR","STACK OVERFLOW","REALITY.EXE CRASH",
             "SYSTEM FAILURE","ENTITY OVERFLOW","FUNGAL OVERRIDE",
@@ -12915,12 +12912,14 @@ local CFG, PAL, STATE, UTIL, FX, REMOTE, AUDIO
 end)()
 
 -- ════════════════════════════════════════════════════════════════════
--- BLOQUE 2: ESTADO & UTILIDADES
+-- BLOQUE 2A: ESTADO  (scope propio → evita Out of local registers)
 -- ════════════════════════════════════════════════════════════════════
 ;(function()
     local folder = workspace:FindFirstChild("PibbyFolder")
     if not folder then
-        folder = Instance.new("Folder"); folder.Name="PibbyFolder"; folder.Parent=workspace
+        folder = Instance.new("Folder")
+        folder.Name = "PibbyFolder"
+        folder.Parent = workspace
     else
         folder:ClearAllChildren()
     end
@@ -12934,9 +12933,12 @@ end)()
         currentPhase=0, infectionReady=false, running=true,
         playerDistortion={},
         origLighting={
-            Ambient=Lighting.Ambient, OutdoorAmbient=Lighting.OutdoorAmbient,
-            FogColor=Lighting.FogColor, FogEnd=Lighting.FogEnd,
-            FogStart=Lighting.FogStart, Brightness=Lighting.Brightness,
+            Ambient        = Lighting.Ambient,
+            OutdoorAmbient = Lighting.OutdoorAmbient,
+            FogColor       = Lighting.FogColor,
+            FogEnd         = Lighting.FogEnd,
+            FogStart       = Lighting.FogStart,
+            Brightness     = Lighting.Brightness,
         },
     }
 
@@ -12949,97 +12951,106 @@ end)()
     rpNoPlayer.FilterType = Enum.RaycastFilterType.Exclude
     rpNoPlayer.IgnoreWater = true
 
-    local function refreshNoPlayer()
+    -- Exponer params en UTIL (se completa en 2B)
+    UTIL = { rpMain = rpMain, rpNoPlayer = rpNoPlayer }
+
+    UTIL.refreshNoPlayer = function()
         local list = {folder}
         for _,pl in ipairs(Players:GetPlayers()) do
             if pl.Character then table.insert(list, pl.Character) end
         end
         rpNoPlayer.FilterDescendantsInstances = list
     end
+end)()
 
-    UTIL = {
-        rpMain = rpMain, rpNoPlayer = rpNoPlayer,
-        refreshNoPlayer = refreshNoPlayer,
+-- ════════════════════════════════════════════════════════════════════
+-- BLOQUE 2B: UTILIDADES  (scope separado → contador de registros limpio)
+-- ════════════════════════════════════════════════════════════════════
+;(function()
+    UTIL.lerpC = function(a, b, t)
+        return Color3.new(
+            a.R+(b.R-a.R)*t,
+            a.G+(b.G-a.G)*t,
+            a.B+(b.B-a.B)*t)
+    end
+    UTIL.rN = function() return PAL.neon [math.random(#PAL.neon)]  end
+    UTIL.rD = function() return PAL.dark [math.random(#PAL.dark)]  end
+    UTIL.rR = function() return PAL.rhizo[math.random(#PAL.rhizo)] end
+    UTIL.rG = function() return PAL.glitch[math.random(#PAL.glitch)] end
 
-        lerpC = function(a,b,t)
-            return Color3.new(a.R+(b.R-a.R)*t, a.G+(b.G-a.G)*t, a.B+(b.B-a.B)*t)
-        end,
-        rN = function() return PAL.neon[math.random(#PAL.neon)] end,
-        rD = function() return PAL.dark[math.random(#PAL.dark)] end,
-        rR = function() return PAL.rhizo[math.random(#PAL.rhizo)] end,
-        rG = function() return PAL.glitch[math.random(#PAL.glitch)] end,
+    UTIL.mycelColor = function(f)
+        f = math.clamp(f, 0, 1)
+        local n  = #PAL.mycel
+        local i  = math.clamp(1 + math.floor(f*(n-1)), 1, n-1)
+        local a2 = PAL.mycel[i]
+        local b2 = PAL.mycel[i+1]
+        local t2 = (f*(n-1)) - (i-1)
+        return Color3.new(
+            a2.R+(b2.R-a2.R)*t2,
+            a2.G+(b2.G-a2.G)*t2,
+            a2.B+(b2.B-a2.B)*t2)
+    end
 
-        mycelColor = function(f)
-            f = math.clamp(f,0,1); local n = #PAL.mycel
-            local i = math.clamp(1+math.floor(f*(n-1)),1,n-1)
-            local a, b = PAL.mycel[i], PAL.mycel[i+1]
-            local t = (f*(n-1))-(i-1)
-            return Color3.new(a.R+(b.R-a.R)*t, a.G+(b.G-a.G)*t, a.B+(b.B-a.B)*t)
-        end,
+    UTIL.gKey = function(p)
+        return math.floor(p.X/CFG.CellSize)..","
+            .. math.floor(p.Y/CFG.CellSize)..","
+            .. math.floor(p.Z/CFG.CellSize)
+    end
 
-        gKey = function(p)
-            return math.floor(p.X/CFG.CellSize)..","..math.floor(p.Y/CFG.CellSize)..","..math.floor(p.Z/CFG.CellSize)
-        end,
-
-        isOcc = function(pos)
-            local cx = math.floor(pos.X/CFG.CellSize)
-            local cy = math.floor(pos.Y/CFG.CellSize)
-            local cz = math.floor(pos.Z/CFG.CellSize)
-            for dx=-1,1 do for dy=-1,1 do for dz=-1,1 do
-                local k = (cx+dx)..","..(cy+dy)..","..(cz+dz)
-                local cell = STATE.spatialGrid[k]
-                if cell then
-                    for _,p in ipairs(cell) do
-                        if (p-pos).Magnitude < CFG.MinDist then return true end
-                    end
-                end
-            end end end
-            return false
-        end,
-
-        addToGrid = function(pos)
-            local k = UTIL.gKey(pos)
-            STATE.spatialGrid[k] = STATE.spatialGrid[k] or {}
-            table.insert(STATE.spatialGrid[k], pos)
-        end,
-
-        nearPlayer = function(pos, customRadius)
-            local r = customRadius or CFG.PlayerRadius
-            for _,pl in ipairs(Players:GetPlayers()) do
-                local ch = pl.Character
-                if ch then
-                    local hrp = ch:FindFirstChild("HumanoidRootPart")
-                    if hrp and (hrp.Position-pos).Magnitude < r then
-                        return true, pl
-                    end
+    UTIL.isOcc = function(pos)
+        local cx = math.floor(pos.X/CFG.CellSize)
+        local cy = math.floor(pos.Y/CFG.CellSize)
+        local cz = math.floor(pos.Z/CFG.CellSize)
+        for dx=-1,1 do for dy=-1,1 do for dz=-1,1 do
+            local k    = (cx+dx)..","..(cy+dy)..","..(cz+dz)
+            local cell = STATE.spatialGrid[k]
+            if cell then
+                for _,p in ipairs(cell) do
+                    if (p-pos).Magnitude < CFG.MinDist then return true end
                 end
             end
-            return false
-        end,
+        end end end
+        return false
+    end
 
-        castSurf = function(origin, dir, len, params)
-            len = len or CFG.RayDown
-            local r = workspace:Raycast(origin, dir.Unit*len, params or rpMain)
-            if r then return r.Position + r.Normal*CFG.SurfaceOff, r.Normal end
-            return nil, nil
-        end,
+    UTIL.addToGrid = function(pos)
+        local k = UTIL.gKey(pos)
+        STATE.spatialGrid[k] = STATE.spatialGrid[k] or {}
+        table.insert(STATE.spatialGrid[k], pos)
+    end
 
-        -- NUEVO: valida que dos puntos estén "conectados" (sin pared atravesada
-        -- que indique salto raro). Devuelve true si la conexión es limpia.
-        canConnect = function(fromPos, toPos)
-            local diff = toPos - fromPos
-            local dist = diff.Magnitude
-            if dist < 0.01 then return true end
-            if dist > CFG.MaxStepDistance then return false end
-            -- Raycast desde fromPos hacia toPos: si choca antes de llegar al destino
-            -- significa que hay una pared en medio = salto inválido
-            local r = workspace:Raycast(fromPos + Vector3.new(0, 0.3, 0), diff, rpMain)
-            if r and (r.Position - fromPos).Magnitude < dist - 0.5 then
-                return false
+    UTIL.nearPlayer = function(pos, customRadius)
+        local r = customRadius or CFG.PlayerRadius
+        for _,pl in ipairs(Players:GetPlayers()) do
+            local ch = pl.Character
+            if ch then
+                local hrp = ch:FindFirstChild("HumanoidRootPart")
+                if hrp and (hrp.Position-pos).Magnitude < r then
+                    return true, pl
+                end
             end
-            return true
-        end,
-    }
+        end
+        return false
+    end
+
+    UTIL.castSurf = function(origin, dir, len, params)
+        len = len or CFG.RayDown
+        local r = workspace:Raycast(origin, dir.Unit*len, params or UTIL.rpMain)
+        if r then return r.Position + r.Normal*CFG.SurfaceOff, r.Normal end
+        return nil, nil
+    end
+
+    UTIL.canConnect = function(fromPos, toPos)
+        local diff = toPos - fromPos
+        local dist = diff.Magnitude
+        if dist < 0.01 then return true end
+        if dist > CFG.MaxStepDistance then return false end
+        local r = workspace:Raycast(fromPos + Vector3.new(0,0.3,0), diff, UTIL.rpMain)
+        if r and (r.Position - fromPos).Magnitude < dist - 0.5 then
+            return false
+        end
+        return true
+    end
 end)()
 
 -- ════════════════════════════════════════════════════════════════════
@@ -13049,28 +13060,28 @@ end)()
     local re = ReplicatedStorage:FindFirstChild("__PibbyDistort")
     if not re then
         re = Instance.new("RemoteEvent")
-        re.Name = "__PibbyDistort"
+        re.Name   = "__PibbyDistort"
         re.Parent = ReplicatedStorage
     end
     REMOTE = re
 
-    local sps = StarterPlayer:FindFirstChild("StarterPlayerScripts")
+    local sps      = StarterPlayer:FindFirstChild("StarterPlayerScripts")
     local existing = sps:FindFirstChild("__PibbyClient")
     if existing then existing:Destroy() end
 
     local ls = Instance.new("LocalScript")
-    ls.Name = "__PibbyClient"
+    ls.Name   = "__PibbyClient"
     ls.Source = [==[
 local Players = game:GetService("Players")
-local RS = game:GetService("ReplicatedStorage")
-local TS = game:GetService("TweenService")
+local RS  = game:GetService("ReplicatedStorage")
+local TS  = game:GetService("TweenService")
 local plr = Players.LocalPlayer
 local re  = RS:WaitForChild("__PibbyDistort")
-local NEON = {Color3.fromRGB(255,0,255),Color3.fromRGB(0,210,255),Color3.fromRGB(180,0,255),Color3.fromRGB(255,55,0),Color3.fromRGB(0,255,110)}
-local DARK = {Color3.fromRGB(6,0,16),Color3.fromRGB(10,0,24),Color3.fromRGB(4,0,10)}
-local GLITCH = {"ERROR %d%%","NULL PTR","REALITY.EXE","FUNGAL OVERRIDE"}
-local function rN() return NEON[math.random(#NEON)] end
-local function rD() return DARK[math.random(#DARK)] end
+local NEON  = {Color3.fromRGB(255,0,255),Color3.fromRGB(0,210,255),Color3.fromRGB(180,0,255),Color3.fromRGB(255,55,0),Color3.fromRGB(0,255,110)}
+local DARK  = {Color3.fromRGB(6,0,16),Color3.fromRGB(10,0,24),Color3.fromRGB(4,0,10)}
+local GLITCH= {"ERROR %d%%","NULL PTR","REALITY.EXE","FUNGAL OVERRIDE"}
+local function rN() return NEON [math.random(#NEON)]  end
+local function rD() return DARK [math.random(#DARK)]  end
 local function rG() return GLITCH[math.random(#GLITCH)] end
 local activeGui, active = nil, false
 local function clear()
@@ -13080,93 +13091,91 @@ end
 local function start(dtype)
     clear(); active = true
     local sg = Instance.new("ScreenGui")
-    sg.Name = "__PibbyDistort"; sg.ResetOnSpawn = false
-    sg.IgnoreGuiInset = true; sg.DisplayOrder = 99999
-    sg.Parent = plr:WaitForChild("PlayerGui"); activeGui = sg
-    if dtype == "scanlines" then
-        local n = 18
+    sg.Name="__PibbyDistort"; sg.ResetOnSpawn=false
+    sg.IgnoreGuiInset=true; sg.DisplayOrder=99999
+    sg.Parent=plr:WaitForChild("PlayerGui"); activeGui=sg
+    if dtype=="scanlines" then
+        local n=18
         for i=1,n do
-            local f = Instance.new("Frame", sg)
-            f.Size = UDim2.new(1,0,0,3)
-            f.Position = UDim2.new(0,0,(i-1)/n,0)
-            f.BackgroundColor3 = rN(); f.BackgroundTransparency = 0.55
-            f.BorderSizePixel = 0
+            local f=Instance.new("Frame",sg)
+            f.Size=UDim2.new(1,0,0,3)
+            f.Position=UDim2.new(0,0,(i-1)/n,0)
+            f.BackgroundColor3=rN(); f.BackgroundTransparency=0.55; f.BorderSizePixel=0
         end
         task.spawn(function()
-            local off = 0
+            local off=0
             while active and sg.Parent do
-                off = (off+0.008)%1
+                off=(off+0.008)%1
                 for i,f in ipairs(sg:GetChildren()) do
                     if f:IsA("Frame") then
-                        f.Position = UDim2.new(0,0,((i-1)/n+off)%1,0)
-                        if math.random()<0.04 then f.BackgroundColor3 = rN() end
+                        f.Position=UDim2.new(0,0,((i-1)/n+off)%1,0)
+                        if math.random()<0.04 then f.BackgroundColor3=rN() end
                     end
                 end
                 task.wait(0.04)
             end
         end)
-    elseif dtype == "static" then
+    elseif dtype=="static" then
         for _i=1,60 do
-            local px = Instance.new("Frame", sg)
-            px.Size = UDim2.new(0,math.random(2,8),0,math.random(2,8))
-            px.Position = UDim2.new(math.random()*0.98,0,math.random()*0.98,0)
-            px.BackgroundColor3 = math.random()<0.5 and rN() or rD()
-            px.BackgroundTransparency = math.random()*0.5
-            px.BorderSizePixel = 0
+            local px=Instance.new("Frame",sg)
+            px.Size=UDim2.new(0,math.random(2,8),0,math.random(2,8))
+            px.Position=UDim2.new(math.random()*0.98,0,math.random()*0.98,0)
+            px.BackgroundColor3=math.random()<0.5 and rN() or rD()
+            px.BackgroundTransparency=math.random()*0.5; px.BorderSizePixel=0
         end
         task.spawn(function()
             while active and sg.Parent do
                 for _,p in ipairs(sg:GetChildren()) do
                     if p:IsA("Frame") and math.random()<0.35 then
-                        p.Position = UDim2.new(math.random()*0.98,0,math.random()*0.98,0)
-                        p.BackgroundColor3 = math.random()<0.5 and rN() or rD()
-                        p.Visible = math.random()<0.7
+                        p.Position=UDim2.new(math.random()*0.98,0,math.random()*0.98,0)
+                        p.BackgroundColor3=math.random()<0.5 and rN() or rD()
+                        p.Visible=math.random()<0.7
                     end
                 end
                 task.wait(0.05)
             end
         end)
-    elseif dtype == "chromatic" then
+    elseif dtype=="chromatic" then
         local function layer(c,x,t)
-            local f = Instance.new("Frame", sg)
-            f.Size = UDim2.new(1,0,1,0); f.Position = UDim2.new(0,x,0,0)
-            f.BackgroundColor3 = c; f.BackgroundTransparency = t; f.BorderSizePixel = 0
+            local f=Instance.new("Frame",sg)
+            f.Size=UDim2.new(1,0,1,0); f.Position=UDim2.new(0,x,0,0)
+            f.BackgroundColor3=c; f.BackgroundTransparency=t; f.BorderSizePixel=0
         end
         layer(Color3.fromRGB(255,0,0),4,0.82); layer(Color3.fromRGB(0,0,255),-4,0.82)
-        local lbl = Instance.new("TextLabel", sg)
-        lbl.Size = UDim2.new(1,0,0,30); lbl.BackgroundTransparency = 1
-        lbl.Font = Enum.Font.Code; lbl.TextSize = 20; lbl.TextStrokeTransparency = 0.4
+        local lbl=Instance.new("TextLabel",sg)
+        lbl.Size=UDim2.new(1,0,0,30); lbl.BackgroundTransparency=1
+        lbl.Font=Enum.Font.Code; lbl.TextSize=20; lbl.TextStrokeTransparency=0.4
         task.spawn(function()
             while active and sg.Parent do
-                lbl.Position = UDim2.new(0,(math.random()-0.5)*14,math.random()*0.9,0)
-                lbl.Text = rG():format(math.random(10,99)); lbl.TextColor3 = rN()
+                lbl.Position=UDim2.new(0,(math.random()-0.5)*14,math.random()*0.9,0)
+                lbl.Text=rG():format(math.random(10,99)); lbl.TextColor3=rN()
                 task.wait(0.12+math.random()*0.25)
             end
         end)
-    elseif dtype == "fragment" then
-        local segs = 6
+    elseif dtype=="fragment" then
+        local segs=6
         for i=1,segs do
-            local f = Instance.new("Frame", sg)
-            f.Size = UDim2.new(1/segs,0,1,0)
-            f.Position = UDim2.new((i-1)/segs,0,0,0)
-            f.BackgroundColor3 = rD(); f.BackgroundTransparency = 0.88
+            local f=Instance.new("Frame",sg)
+            f.Size=UDim2.new(1/segs,0,1,0)
+            f.Position=UDim2.new((i-1)/segs,0,0,0)
+            f.BackgroundColor3=rD(); f.BackgroundTransparency=0.88
         end
         task.spawn(function()
             while active and sg.Parent do
                 for _,f in ipairs(sg:GetChildren()) do
                     if f:IsA("Frame") and math.random()<0.20 then
-                        local y = f.Position.Y.Scale
-                        f.Position = UDim2.new(f.Position.X.Scale,0,y+(math.random()-0.5)*0.04,0)
-                        if math.random()<0.08 then f.BackgroundColor3 = rN() end
+                        local y=f.Position.Y.Scale
+                        f.Position=UDim2.new(f.Position.X.Scale,0,y+(math.random()-0.5)*0.04,0)
+                        if math.random()<0.08 then f.BackgroundColor3=rN() end
                     end
                 end
                 task.wait(0.08)
             end
         end)
-    elseif dtype == "invert" then
-        local ov = Instance.new("Frame", sg)
-        ov.Size = UDim2.new(1,0,1,0); ov.BackgroundColor3 = Color3.new(0,0,0)
-        ov.BackgroundTransparency = 0.82
+    elseif dtype=="invert" then
+        local ov=Instance.new("Frame",sg)
+        ov.Size=UDim2.new(1,0,1,0); ov.BackgroundColor3=Color3.new(0,0,0)
+        ov.BackgroundTransparency=0.82
         task.spawn(function()
             while active and sg.Parent do
                 TS:Create(ov,TweenInfo.new(0.3),{BackgroundTransparency=0.55}):Play()
@@ -13175,28 +13184,28 @@ local function start(dtype)
                 task.wait(1.5+math.random()*3)
             end
         end)
-    elseif dtype == "zoom" then
-        local zf = Instance.new("Frame", sg)
-        zf.Size = UDim2.new(1.3,0,1.3,0); zf.Position = UDim2.new(-0.15,0,-0.15,0)
-        zf.BackgroundColor3 = rD(); zf.BackgroundTransparency = 0.90
+    elseif dtype=="zoom" then
+        local zf=Instance.new("Frame",sg)
+        zf.Size=UDim2.new(1.3,0,1.3,0); zf.Position=UDim2.new(-0.15,0,-0.15,0)
+        zf.BackgroundColor3=rD(); zf.BackgroundTransparency=0.90
         task.spawn(function()
             while active and sg.Parent do
                 task.wait(0.8+math.random()*2)
-                local s = 0.88+math.random()*0.28
+                local s=0.88+math.random()*0.28
                 TS:Create(zf,TweenInfo.new(0.06),{Size=UDim2.new(s,0,s,0),Position=UDim2.new(-(s-1)/2,0,-(s-1)/2,0)}):Play()
                 task.wait(0.1)
                 TS:Create(zf,TweenInfo.new(0.08),{Size=UDim2.new(1.3,0,1.3,0),Position=UDim2.new(-0.15,0,-0.15,0)}):Play()
             end
         end)
-    elseif dtype == "drain" then
-        local top = Instance.new("Frame", sg)
-        top.Size = UDim2.new(1,0,0,0); top.BackgroundColor3 = rD()
-        local bot = Instance.new("Frame", sg)
-        bot.Size = UDim2.new(1,0,0,0); bot.Position = UDim2.new(0,0,1,0)
-        bot.BackgroundColor3 = rD()
+    elseif dtype=="drain" then
+        local top=Instance.new("Frame",sg)
+        top.Size=UDim2.new(1,0,0,0); top.BackgroundColor3=rD()
+        local bot=Instance.new("Frame",sg)
+        bot.Size=UDim2.new(1,0,0,0); bot.Position=UDim2.new(0,0,1,0)
+        bot.BackgroundColor3=rD()
         task.spawn(function()
             while active and sg.Parent do
-                local h = math.random()*0.12
+                local h=math.random()*0.12
                 TS:Create(top,TweenInfo.new(0.4),{Size=UDim2.new(1,0,h,0)}):Play()
                 TS:Create(bot,TweenInfo.new(0.4),{Size=UDim2.new(1,0,h,0),Position=UDim2.new(0,0,1-h,0)}):Play()
                 task.wait(1.2+math.random()*2.5)
@@ -13207,8 +13216,8 @@ local function start(dtype)
         end)
     end
 end
-re.OnClientEvent:Connect(function(action, dtype)
-    if action == "start" then start(dtype) elseif action == "stop" then clear() end
+re.OnClientEvent:Connect(function(action,dtype)
+    if action=="start" then start(dtype) elseif action=="stop" then clear() end
 end)
 ]==]
     ls.Parent = sps
@@ -13218,52 +13227,48 @@ end)()
 -- BLOQUE 4: POST-FX
 -- ════════════════════════════════════════════════════════════════════
 ;(function()
-    local atmo = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere", Lighting)
-    atmo.Density = 0; atmo.Haze = 0
-    atmo.Color = Color3.fromRGB(100,50,150)
-    atmo.Glare = 0; atmo.Decay = Color3.fromRGB(200,150,255)
+    local atmo = Lighting:FindFirstChildOfClass("Atmosphere")
+        or Instance.new("Atmosphere", Lighting)
+    atmo.Density = 0; atmo.Haze  = 0
+    atmo.Color   = Color3.fromRGB(100,50,150)
+    atmo.Glare   = 0; atmo.Decay = Color3.fromRGB(200,150,255)
 
-    local bloom = Lighting:FindFirstChild("__PibbyBloom") or Instance.new("BloomEffect")
-    bloom.Name = "__PibbyBloom"; bloom.Intensity = 0; bloom.Size = 24
-    bloom.Threshold = 0.95; bloom.Parent = Lighting
+    local bloom = Lighting:FindFirstChild("__PibbyBloom")
+        or Instance.new("BloomEffect")
+    bloom.Name="__PibbyBloom"; bloom.Intensity=0
+    bloom.Size=24; bloom.Threshold=0.95; bloom.Parent=Lighting
 
-    local cc = Lighting:FindFirstChild("__PibbyCC") or Instance.new("ColorCorrectionEffect")
-    cc.Name = "__PibbyCC"; cc.Brightness = 0; cc.Contrast = 0
-    cc.Saturation = 0; cc.TintColor = Color3.new(1,1,1); cc.Parent = Lighting
+    local cc = Lighting:FindFirstChild("__PibbyCC")
+        or Instance.new("ColorCorrectionEffect")
+    cc.Name="__PibbyCC"; cc.Brightness=0; cc.Contrast=0
+    cc.Saturation=0; cc.TintColor=Color3.new(1,1,1); cc.Parent=Lighting
 
-    local dof = Lighting:FindFirstChild("__PibbyDOF") or Instance.new("DepthOfFieldEffect")
-    dof.Name = "__PibbyDOF"; dof.FocusDistance = 50; dof.InFocusRadius = 50
-    dof.NearIntensity = 0; dof.FarIntensity = 0; dof.Parent = Lighting
+    local dof = Lighting:FindFirstChild("__PibbyDOF")
+        or Instance.new("DepthOfFieldEffect")
+    dof.Name="__PibbyDOF"; dof.FocusDistance=50; dof.InFocusRadius=50
+    dof.NearIntensity=0; dof.FarIntensity=0; dof.Parent=Lighting
 
     FX = {atmo=atmo, bloom=bloom, cc=cc, dof=dof}
 end)()
 
 -- ════════════════════════════════════════════════════════════════════
--- BLOQUE 5: 🔊 SISTEMA DE AUDIO COMPLETO (separado y autocontenido)
+-- BLOQUE 5: SISTEMA DE AUDIO
 -- ════════════════════════════════════════════════════════════════════
 ;(function()
-    AUDIO = {
-        enabled = CFG.AudioOn,
-        sounds = {},
-        intensity = 0,
-        running = true,
-    }
+    AUDIO = { enabled=CFG.AudioOn, sounds={}, intensity=0, running=true }
 
     if not CFG.AudioOn then
         AUDIO.setIntensity = function() end
-        AUDIO.stop = function() end
+        AUDIO.stop         = function() end
         return
     end
 
-    -- SoundGroup central
     local sg = SoundService:FindFirstChild("__PibbyAudio")
     if sg then sg:Destroy() end
     sg = Instance.new("SoundGroup")
-    sg.Name = "__PibbyAudio"; sg.Volume = 0.2
-    sg.Parent = SoundService
+    sg.Name="__PibbyAudio"; sg.Volume=0.2; sg.Parent=SoundService
     AUDIO.group = sg
 
-    -- IDs públicos de Roblox (cámbialos por los tuyos si no cargan)
     local ASSETS = {
         heartbeat = "rbxassetid://9046447447",
         drone     = "rbxassetid://9112955391",
@@ -13271,15 +13276,11 @@ end)()
         glitch    = "rbxassetid://6890585437",
     }
 
-    -- Helper para crear sonidos
     local function makeSound(name, id, looped, baseVol)
         local s = Instance.new("Sound")
-        s.Name = "__Pibby_" .. name
-        s.SoundId = id
-        s.Looped = looped or false
-        s.Volume = baseVol or 0.5
-        s.SoundGroup = sg
-        s.Parent = SoundService
+        s.Name="__Pibby_"..name; s.SoundId=id
+        s.Looped=looped or false; s.Volume=baseVol or 0.5
+        s.SoundGroup=sg; s.Parent=SoundService
         AUDIO.sounds[name] = s
         return s
     end
@@ -13288,45 +13289,39 @@ end)()
     makeSound("drone",   ASSETS.drone,     true,  0.0)
     makeSound("whisper", ASSETS.whisper,   false, 0.0)
     makeSound("glitch",  ASSETS.glitch,    false, 0.0)
-
-    -- Drone arranca
     AUDIO.sounds.drone:Play()
 
-    -- API pública: setIntensity(0..1)
     function AUDIO.setIntensity(value)
         AUDIO.intensity = math.clamp(value, 0, 1)
         TweenService:Create(sg, TweenInfo.new(2),
-            {Volume = 0.15 + AUDIO.intensity * 0.55}):Play()
+            {Volume = 0.15 + AUDIO.intensity*0.55}):Play()
         TweenService:Create(AUDIO.sounds.drone, TweenInfo.new(2),
-            {Volume = 0.25 + AUDIO.intensity * 0.45}):Play()
+            {Volume = 0.25 + AUDIO.intensity*0.45}):Play()
     end
 
-    -- API pública: detener todo
     function AUDIO.stop()
         AUDIO.running = false
-        for _, s in pairs(AUDIO.sounds) do
+        for _,s in pairs(AUDIO.sounds) do
             if s.IsPlaying then s:Stop() end
             s:Destroy()
         end
         if sg then sg:Destroy() end
     end
 
-    -- API pública: reproducir glitch one-shot manualmente
     function AUDIO.playGlitch(volume, speed)
         if not AUDIO.sounds.glitch then return end
-        AUDIO.sounds.glitch.Volume = volume or (0.3 + math.random()*0.4)
-        AUDIO.sounds.glitch.PlaybackSpeed = speed or (0.6 + math.random()*1.4)
+        AUDIO.sounds.glitch.Volume        = volume or (0.3+math.random()*0.4)
+        AUDIO.sounds.glitch.PlaybackSpeed = speed  or (0.6+math.random()*1.4)
         AUDIO.sounds.glitch:Play()
     end
 
-    -- LATIDO: ritmo se acelera con la fase
     task.spawn(function()
         while AUDIO.running and STATE.running do
-            local interval = CFG.HeartbeatBase - math.min(STATE.currentPhase * 0.25, 1.6)
-            interval = math.max(0.55, interval)
+            local interval = math.max(0.55,
+                CFG.HeartbeatBase - math.min(STATE.currentPhase*0.25, 1.6))
             local h = AUDIO.sounds.heart
             if h then
-                h.Volume = 0.4 + math.min(STATE.currentPhase * 0.1, 0.4)
+                h.Volume        = 0.4 + math.min(STATE.currentPhase*0.1, 0.4)
                 h.PlaybackSpeed = 0.85 + math.random()*0.3
                 h:Play()
             end
@@ -13334,22 +13329,20 @@ end)()
         end
     end)
 
-    -- SUSURROS: aparecen desde fase 1
     task.spawn(function()
         while AUDIO.running and STATE.running do
             task.wait(6 + math.random()*10)
             if STATE.currentPhase >= 1 and math.random() < 0.5 then
                 local w = AUDIO.sounds.whisper
                 if w then
-                    w.Volume = 0.25 + math.random()*0.3
-                    w.PlaybackSpeed = 0.7 + math.random()*0.6
+                    w.Volume=0.25+math.random()*0.3
+                    w.PlaybackSpeed=0.7+math.random()*0.6
                     w:Play()
                 end
             end
         end
     end)
 
-    -- GLITCHES: aparecen desde fase 2
     task.spawn(function()
         while AUDIO.running and STATE.running do
             task.wait(3 + math.random()*8)
@@ -13371,47 +13364,46 @@ local SPAWN = {}
         if STATE.partCount >= CFG.MaxParts then return nil end
         local len = (to-from).Magnitude
         if len < 0.05 or len > CFG.MaxStepDistance then return nil end
-
         local p = Instance.new("Part")
-        p.Anchored = true; p.CanCollide = false; p.CastShadow = false
-        local w = isRhizo and (CFG.RhizoWidth+math.random()*0.14) or (CFG.TendrilW+math.random()*0.11)
-        local h = isRhizo and (CFG.RhizoHeight+math.random()*0.05) or (CFG.TendrilH+math.random()*0.03)
+        p.Anchored=true; p.CanCollide=false; p.CastShadow=false
+        local w = isRhizo and (CFG.RhizoWidth+math.random()*0.14)
+                           or (CFG.TendrilW   +math.random()*0.11)
+        local h = isRhizo and (CFG.RhizoHeight+math.random()*0.05)
+                           or (CFG.TendrilH   +math.random()*0.03)
         p.Size = Vector3.new(w, h, len)
-
-        local look = (to-from).Unit
+        local look  = (to-from).Unit
         local right = sn:Cross(look)
         right = right.Magnitude < 0.001 and Vector3.new(1,0,0) or right.Unit
         p.CFrame = CFrame.fromMatrix((from+to)/2, right, look:Cross(right).Unit)
-
         if isNeon then
-            p.Color = UTIL.rN(); p.Material = Enum.Material.Neon
+            p.Color=UTIL.rN(); p.Material=Enum.Material.Neon
         elseif isRhizo then
-            p.Color = UTIL.rR(); p.Material = Enum.Material.SmoothPlastic
+            p.Color=UTIL.rR(); p.Material=Enum.Material.SmoothPlastic
         else
-            p.Color = UTIL.mycelColor(age)
-            p.Material = age > 0.72 and Enum.Material.SmoothPlastic or Enum.Material.Fabric
+            p.Color    = UTIL.mycelColor(age)
+            p.Material = age > 0.72 and Enum.Material.SmoothPlastic
+                                     or Enum.Material.Fabric
         end
-        p.Transparency = 1; p.Parent = STATE.folder
+        p.Transparency=1; p.Parent=STATE.folder
         STATE.partCount += 1
         TweenService:Create(p, TweenInfo.new(0.20),
             {Transparency = isNeon and 0 or (isRhizo and 0.08 or 0.04)}):Play()
-
         if isRhizo then
-            local li = Instance.new("PointLight", p)
-            li.Color = Color3.fromRGB(110,0,190); li.Range = 5; li.Brightness = 0.35
+            local li=Instance.new("PointLight",p)
+            li.Color=Color3.fromRGB(110,0,190); li.Range=5; li.Brightness=0.35
         end
         return p
     end
 
     function SPAWN.blob(pos, normal, radius, ageFrac)
         if STATE.partCount >= CFG.MaxParts then return nil end
-        radius = radius or (CFG.BlobRadMin + math.random()*(CFG.BlobRadMax-CFG.BlobRadMin))
+        radius  = radius  or (CFG.BlobRadMin + math.random()*(CFG.BlobRadMax-CFG.BlobRadMin))
         ageFrac = ageFrac or 1
-        local p = Instance.new("Part")
+        local p   = Instance.new("Part")
         local shp = math.random(3)
         p.Shape = shp==1 and Enum.PartType.Ball
-            or (shp==2 and Enum.PartType.Block or Enum.PartType.Cylinder)
-        p.Anchored = true; p.CanCollide = false; p.CastShadow = false
+               or (shp==2 and Enum.PartType.Block or Enum.PartType.Cylinder)
+        p.Anchored=true; p.CanCollide=false; p.CastShadow=false
         local ry = radius*(0.22+math.random()*0.52)
         p.Size = Vector3.new(radius, ry, radius*(0.75+math.random()*0.5))
         local br = normal:Cross(Vector3.new(0,0,1))
@@ -13419,17 +13411,18 @@ local SPAWN = {}
         p.CFrame = CFrame.fromMatrix(pos+normal*(ry/2), br, normal, -br:Cross(normal).Unit)
             * CFrame.Angles(0, math.random()*math.pi*2, math.random()*0.35)
         local isNeon = math.random() < 0.09
-        p.Color = isNeon and UTIL.rN() or (ageFrac > 0.42 and UTIL.rD() or UTIL.mycelColor(ageFrac))
+        p.Color    = isNeon and UTIL.rN()
+                  or (ageFrac > 0.42 and UTIL.rD() or UTIL.mycelColor(ageFrac))
         p.Material = isNeon and Enum.Material.Neon or Enum.Material.SmoothPlastic
-        p.Transparency = 1; p.Parent = STATE.folder
+        p.Transparency=1; p.Parent=STATE.folder
         STATE.partCount += 1
         TweenService:Create(p, TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
             {Transparency = isNeon and 0 or 0.04}):Play()
-        table.insert(STATE.blobReg, {pos = pos, time = tick()})
+        table.insert(STATE.blobReg, {pos=pos, time=tick()})
         if not isNeon and ageFrac > 0.28 and math.random() < 0.22 then
-            local li = Instance.new("PointLight", p)
-            li.Color = Color3.fromRGB(95,0,175)
-            li.Range = 4 + radius*2.2; li.Brightness = 0.28 + ageFrac*0.38
+            local li=Instance.new("PointLight",p)
+            li.Color=Color3.fromRGB(95,0,175)
+            li.Range=4+radius*2.2; li.Brightness=0.28+ageFrac*0.38
         end
         return p
     end
@@ -13438,71 +13431,60 @@ local SPAWN = {}
         if STATE.partCount >= CFG.MaxParts then return end
         scale = scale or 1
         local p = Instance.new("Part")
-        p.Anchored = true; p.CanCollide = false; p.CastShadow = false
-        p.Shape = Enum.PartType.Ball
-        p.Size = Vector3.new(0.35,0.35,0.35)*scale
-        p.Position = pos + normal*0.35
-        p.Color = UTIL.rN(); p.Material = Enum.Material.Neon
-        p.Parent = STATE.folder; STATE.partCount += 1
-        local li = Instance.new("PointLight", p)
-        li.Color = p.Color; li.Range = 14*scale; li.Brightness = 3
-        TweenService:Create(p, TweenInfo.new(0.28),
-            {Size = Vector3.new(4.5,4.5,4.5)*scale, Transparency = 1}):Play()
-        TweenService:Create(li, TweenInfo.new(0.28), {Brightness = 0}):Play()
+        p.Anchored=true; p.CanCollide=false; p.CastShadow=false
+        p.Shape=Enum.PartType.Ball
+        p.Size=Vector3.new(0.35,0.35,0.35)*scale
+        p.Position=pos+normal*0.35
+        p.Color=UTIL.rN(); p.Material=Enum.Material.Neon
+        p.Parent=STATE.folder; STATE.partCount+=1
+        local li=Instance.new("PointLight",p)
+        li.Color=p.Color; li.Range=14*scale; li.Brightness=3
+        TweenService:Create(p,TweenInfo.new(0.28),
+            {Size=Vector3.new(4.5,4.5,4.5)*scale, Transparency=1}):Play()
+        TweenService:Create(li,TweenInfo.new(0.28),{Brightness=0}):Play()
         task.delay(0.32, function()
-            if p then p:Destroy(); STATE.partCount = math.max(0, STATE.partCount-1) end
+            if p then p:Destroy(); STATE.partCount=math.max(0,STATE.partCount-1) end
         end)
     end
 end)()
 
 -- ════════════════════════════════════════════════════════════════════
--- BLOQUE 7: CRECIMIENTO DE NODOS — FIX REFORZADO ANTI-HUÉRFANOS
+-- BLOQUE 7: CRECIMIENTO DE NODOS
 -- ════════════════════════════════════════════════════════════════════
 local GROW = {}
 ;(function()
     function GROW.cleanBlobReg()
-        local t = tick(); local clean = {}
+        local t=tick(); local clean={}
         for _,b in ipairs(STATE.blobReg) do
-            if t - b.time <= 130 then table.insert(clean, b) end
+            if t-b.time <= 130 then table.insert(clean,b) end
         end
         STATE.blobReg = clean
     end
 
     function GROW.getBlobDensity(pos, radius)
-        local count = 0
+        local count=0
         for _,b in ipairs(STATE.blobReg) do
-            if (b.pos-pos).Magnitude < radius then count += 1 end
+            if (b.pos-pos).Magnitude < radius then count+=1 end
         end
         return count
     end
 
-    -- Step de un nodo con TODAS las validaciones
     function GROW.stepNode(node)
         if node.life <= 0 then return false end
         node.life -= 1
-        node.age = 1 - (node.life / node.maxLife)
+        node.age   = 1 - (node.life / node.maxLife)
 
-        -- VALIDACIÓN A: la posición del nodo padre debe ser válida
         if not node.pos or node.pos.Magnitude < 1 then return false end
+        if UTIL.nearPlayer(node.pos, CFG.MinSpawnDistFromPlayer) then return false end
 
-        -- VALIDACIÓN B: rechazar si hay jugador MUY cerca de la posición actual
-        if UTIL.nearPlayer(node.pos, CFG.MinSpawnDistFromPlayer) then
-            return false  -- mata la rama, no spawnea pegado al jugador
-        end
+        local jitter   = Vector3.new((math.random()-0.5)*0.6, 0, (math.random()-0.5)*0.6)
+        local dir      = (node.dir + jitter).Unit
+        local stepSize = node.nodeType=="rhizo" and CFG.RhizoStep or CFG.StepSize
+        local newPos   = node.pos + dir*stepSize
 
-        -- Calcular nueva posición
-        local jitter = Vector3.new((math.random()-0.5)*0.6, 0, (math.random()-0.5)*0.6)
-        local dir = (node.dir + jitter).Unit
-        local stepSize = node.nodeType == "rhizo" and CFG.RhizoStep or CFG.StepSize
-        local newPos = node.pos + dir * stepSize
+        if (newPos-node.pos).Magnitude > CFG.MaxBranchDist then return false end
 
-        -- VALIDACIÓN C: distancia razonable desde nodo padre
-        if (newPos - node.pos).Magnitude > CFG.MaxBranchDist then
-            return false
-        end
-
-        -- VALIDACIÓN D: anclaje a superficie
-        local sp, sn = UTIL.castSurf(newPos + Vector3.new(0,2,0),
+        local sp, sn = UTIL.castSurf(newPos+Vector3.new(0,2,0),
             Vector3.new(0,-1,0), CFG.AnchorRayLen, UTIL.rpMain)
         if not sp then
             node.orphanFails = (node.orphanFails or 0) + 1
@@ -13511,89 +13493,68 @@ local GROW = {}
         end
         node.orphanFails = 0
 
-        -- VALIDACIÓN E: pos absoluta no puede ser cerca de (0,0,0)
         if sp.Magnitude < 1 then return false end
-
-        -- VALIDACIÓN F (LA CLAVE DEL FIX): conectividad entre nodo padre y nuevo
-        if CFG.ConnectivityCheck and not UTIL.canConnect(node.pos, sp) then
-            return false  -- hay pared/aire en medio = sería un "salto huérfano"
-        end
-
-        -- VALIDACIÓN G: no spawnear cerca del jugador
+        if CFG.ConnectivityCheck and not UTIL.canConnect(node.pos, sp) then return false end
         if UTIL.nearPlayer(sp, CFG.MinSpawnDistFromPlayer) then
-            node.dir = -node.dir  -- huye
-            return true
+            node.dir = -node.dir; return true
         end
-
-        -- VALIDACIÓN H: evitar saturación
         if UTIL.isOcc(sp) then return false end
 
-        -- TODAS LAS VALIDACIONES OK → crear segmento
-        local isNeon = math.random() < CFG.NeonChance
+        local isNeon  = math.random() < CFG.NeonChance
         local isRhizo = node.nodeType == "rhizo"
-        local part = SPAWN.tendril(node.pos, sp, sn, node.age, isNeon, isRhizo)
-        if not part then return false end  -- spawn falló, mata rama
+        local part    = SPAWN.tendril(node.pos, sp, sn, node.age, isNeon, isRhizo)
+        if not part then return false end
 
         UTIL.addToGrid(sp)
+        if math.random() < CFG.BlobChance then SPAWN.blob(sp, sn, nil, node.age) end
+        node.pos=sp; node.normal=sn; node.dir=dir
 
-        if math.random() < CFG.BlobChance then
-            SPAWN.blob(sp, sn, nil, node.age)
-        end
-
-        node.pos = sp; node.normal = sn; node.dir = dir
-
-        -- Branching (con misma validación de jugador)
         if node.depth < CFG.MaxDepth
-           and math.random() < CFG.BranchChance * (CFG.BranchDecay^node.depth) then
+           and math.random() < CFG.BranchChance*(CFG.BranchDecay^node.depth) then
             if #STATE.nodes < CFG.MaxNodes
                and not UTIL.nearPlayer(sp, CFG.MinSpawnDistFromPlayer) then
-                local angle = (math.random()-0.5) * math.pi
-                local newDir = CFrame.Angles(0, angle, 0):VectorToWorldSpace(node.dir)
-                local nl = math.random(CFG.LifeMin, CFG.LifeMax)
+                local angle  = (math.random()-0.5)*math.pi
+                local newDir = CFrame.Angles(0,angle,0):VectorToWorldSpace(node.dir)
+                local nl     = math.random(CFG.LifeMin, CFG.LifeMax)
                 table.insert(STATE.nodes, {
-                    pos = sp, dir = newDir, normal = sn,
-                    life = nl, maxLife = nl,
-                    depth = node.depth+1, age = node.age,
-                    nodeType = node.nodeType, orphanFails = 0,
+                    pos=sp, dir=newDir, normal=sn,
+                    life=nl, maxLife=nl,
+                    depth=node.depth+1, age=node.age,
+                    nodeType=node.nodeType, orphanFails=0,
                 })
             end
         end
 
-        -- Conversión a rhizomorph
         if not isRhizo and math.random() < CFG.RhizoChance and node.depth <= 2 then
             local nl = math.random(CFG.RhizoLifeMin, CFG.RhizoLifeMax)
             table.insert(STATE.nodes, {
-                pos = sp, dir = Vector3.new(dir.X,0,dir.Z).Unit,
-                normal = sn, life = nl, maxLife = nl,
-                depth = 0, age = 0, nodeType = "rhizo", orphanFails = 0,
+                pos=sp, dir=Vector3.new(dir.X,0,dir.Z).Unit,
+                normal=sn, life=nl, maxLife=nl,
+                depth=0, age=0, nodeType="rhizo", orphanFails=0,
             })
         end
-
         return true
     end
 
     function GROW.tickAll()
-        local alive = {}
+        local alive={}
         for _,n in ipairs(STATE.nodes) do
-            if GROW.stepNode(n) then table.insert(alive, n) end
+            if GROW.stepNode(n) then table.insert(alive,n) end
         end
         STATE.nodes = alive
     end
 
     function GROW.seed(pos, normal)
         if not pos or pos.Magnitude < 1 then return end
-        -- VALIDACIÓN: no sembrar cerca de jugadores
-        if UTIL.nearPlayer(pos, CFG.MinSpawnDistFromPlayer * 2) then return end
+        if UTIL.nearPlayer(pos, CFG.MinSpawnDistFromPlayer*2) then return end
         for i=1,6 do
-            local a = (i/6) * math.pi * 2
+            local a  = (i/6)*math.pi*2
             local nl = math.random(CFG.LifeMin, CFG.LifeMax)
             table.insert(STATE.nodes, {
-                pos = pos,
-                dir = Vector3.new(math.cos(a),0,math.sin(a)),
-                normal = normal or Vector3.new(0,1,0),
-                life = nl, maxLife = nl,
-                depth = 0, age = 0,
-                nodeType = "normal", orphanFails = 0,
+                pos=pos, dir=Vector3.new(math.cos(a),0,math.sin(a)),
+                normal=normal or Vector3.new(0,1,0),
+                life=nl, maxLife=nl,
+                depth=0, age=0, nodeType="normal", orphanFails=0,
             })
         end
     end
@@ -13607,13 +13568,13 @@ local INFECT = {}
     local DTYPES = {"scanlines","static","chromatic","fragment","invert","zoom","drain"}
 
     function INFECT.assign(player)
-        local used = {}
-        for _,t in pairs(STATE.playerDistortion) do used[t] = true end
-        local pool = {}
+        local used={}
+        for _,t in pairs(STATE.playerDistortion) do used[t]=true end
+        local pool={}
         for _,t in ipairs(DTYPES) do
-            if not used[t] then table.insert(pool, t) end
+            if not used[t] then table.insert(pool,t) end
         end
-        if #pool == 0 then pool = DTYPES end
+        if #pool==0 then pool=DTYPES end
         local pick = pool[math.random(#pool)]
         STATE.playerDistortion[player] = pick
         return pick
@@ -13625,13 +13586,13 @@ local INFECT = {}
         local dtype = INFECT.assign(player)
         REMOTE:FireClient(player, "start", dtype)
         if AUDIO.playGlitch then AUDIO.playGlitch(0.6, 0.8) end
-        print("[Pibby] Jugador infectado: "..player.Name.." → "..dtype)
+        print("[Pibby] Infectado: "..player.Name.." → "..dtype)
     end
 
     function INFECT.stop(player)
-        STATE.infected[player] = nil
+        STATE.infected[player]         = nil
         STATE.playerDistortion[player] = nil
-        if player and player.Parent then REMOTE:FireClient(player, "stop") end
+        if player and player.Parent then REMOTE:FireClient(player,"stop") end
     end
 
     function INFECT.tickContact()
@@ -13675,16 +13636,15 @@ local NPC = {}
                 if p:IsA("BasePart") then
                     task.spawn(function()
                         task.wait(math.random()*1.5)
-                        TweenService:Create(p, TweenInfo.new(1.2), {Color = UTIL.rD()}):Play()
+                        TweenService:Create(p,TweenInfo.new(1.2),{Color=UTIL.rD()}):Play()
                     end)
                 end
             end
             local head = model:FindFirstChild("Head")
             if head then
-                local hl = Instance.new("PointLight", head)
-                hl.Color = Color3.fromRGB(180,0,255); hl.Range = 16; hl.Brightness = 3
+                local hl=Instance.new("PointLight",head)
+                hl.Color=Color3.fromRGB(180,0,255); hl.Range=16; hl.Brightness=3
             end
-
             task.wait(2.5)
             if not (model.Parent and STATE.infectedNpcs[model]) then return end
             hum.WalkSpeed = (hum.WalkSpeed or 16) * CFG.NpcChaseSpeed * 1.8
@@ -13695,25 +13655,26 @@ local NPC = {}
                     if pl.Character then
                         local phrp = pl.Character:FindFirstChild("HumanoidRootPart")
                         if phrp then
-                            local d = (phrp.Position - hrp.Position).Magnitude
+                            local d = (phrp.Position-hrp.Position).Magnitude
                             if not bestDist or d < bestDist then
-                                bestDist = d; target = phrp
+                                bestDist=d; target=phrp
                             end
                         end
                     end
                 end
-
                 if target then
                     hum:MoveTo(target.Position)
-                    if bestDist <= CFG.NpcInfectRadius and math.random() < CFG.NpcInfectChance then
+                    if bestDist <= CFG.NpcInfectRadius
+                       and math.random() < CFG.NpcInfectChance then
                         for _,pl in ipairs(Players:GetPlayers()) do
-                            if pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") == target then
+                            if pl.Character
+                               and pl.Character:FindFirstChild("HumanoidRootPart")==target then
                                 INFECT.start(pl); break
                             end
                         end
                     end
                 end
-                task.wait(0.5 + math.random()*0.5)
+                task.wait(0.5+math.random()*0.5)
             end
             STATE.infectedNpcs[model] = nil
         end)
@@ -13721,7 +13682,9 @@ local NPC = {}
 
     function NPC.scanAndCorrupt()
         for _,model in ipairs(workspace:GetDescendants()) do
-            if model:IsA("Model") and not STATE.infectedNpcs[model] and not isPlayerCharacter(model) then
+            if model:IsA("Model")
+               and not STATE.infectedNpcs[model]
+               and not isPlayerCharacter(model) then
                 local hum = model:FindFirstChildOfClass("Humanoid")
                 local hrp = model:FindFirstChild("HumanoidRootPart")
                 if hum and hrp and hum.Health > 0 then
@@ -13741,100 +13704,90 @@ local CONSUME = {}
 ;(function()
     function CONSUME.tryAt(pos)
         if not CFG.MapConsumeOn or math.random() >= CFG.MapConsumeChance then return end
-        -- No consumir cerca de jugadores
-        if UTIL.nearPlayer(pos, CFG.MinSpawnDistFromPlayer * 2) then return end
-
-        local dir = Vector3.new((math.random()-0.5)*2, -0.6, (math.random()-0.5)*2).Unit
-        local r = workspace:Raycast(pos + Vector3.new(0,0.3,0), dir*CFG.MapConsumeRadius, UTIL.rpMain)
+        if UTIL.nearPlayer(pos, CFG.MinSpawnDistFromPlayer*2) then return end
+        local dir = Vector3.new((math.random()-0.5)*2,-0.6,(math.random()-0.5)*2).Unit
+        local r   = workspace:Raycast(pos+Vector3.new(0,0.3,0), dir*CFG.MapConsumeRadius, UTIL.rpMain)
         if not r then return end
         local inst = r.Instance
         if not inst or not inst:IsA("BasePart") then return end
-        if inst.Name == "Baseplate" or inst:FindFirstAncestor("PibbyFolder") then return end
+        if inst.Name=="Baseplate" or inst:FindFirstAncestor("PibbyFolder") then return end
         if STATE.consumed[inst] or inst.Locked or not inst.Anchored then return end
-
         STATE.consumed[inst] = true
         task.spawn(function()
-            local oc, om, ot, os = inst.Color, inst.Material, inst.Transparency, inst.Size
-            TweenService:Create(inst, TweenInfo.new(CFG.MapConsumeTime*0.32),
-                {Color = UTIL.lerpC(oc, UTIL.rD(), 0.55)}):Play()
+            local oc,om,ot,os = inst.Color,inst.Material,inst.Transparency,inst.Size
+            TweenService:Create(inst,TweenInfo.new(CFG.MapConsumeTime*0.32),
+                {Color=UTIL.lerpC(oc,UTIL.rD(),0.55)}):Play()
             task.wait(CFG.MapConsumeTime*0.32)
-            if not (inst and inst.Parent) then STATE.consumed[inst] = nil; return end
-            inst.Material = Enum.Material.Neon
-            TweenService:Create(inst, TweenInfo.new(CFG.MapConsumeTime*0.3),
-                {Color = UTIL.rN(), Transparency = 0.45}):Play()
+            if not (inst and inst.Parent) then STATE.consumed[inst]=nil; return end
+            inst.Material=Enum.Material.Neon
+            TweenService:Create(inst,TweenInfo.new(CFG.MapConsumeTime*0.3),
+                {Color=UTIL.rN(),Transparency=0.45}):Play()
             task.wait(CFG.MapConsumeTime*0.3)
-            if not (inst and inst.Parent) then STATE.consumed[inst] = nil; return end
-            SPAWN.flash(inst.Position, Vector3.new(0,1,0),
-                math.clamp(inst.Size.Magnitude*0.18, 0.4, 3))
-            TweenService:Create(inst, TweenInfo.new(CFG.MapConsumeTime*0.22),
-                {Transparency = 1, Size = os*0.08}):Play()
-            task.wait(CFG.MapConsumeTime*0.22 + 0.1)
+            if not (inst and inst.Parent) then STATE.consumed[inst]=nil; return end
+            SPAWN.flash(inst.Position,Vector3.new(0,1,0),
+                math.clamp(inst.Size.Magnitude*0.18,0.4,3))
+            TweenService:Create(inst,TweenInfo.new(CFG.MapConsumeTime*0.22),
+                {Transparency=1,Size=os*0.08}):Play()
+            task.wait(CFG.MapConsumeTime*0.22+0.1)
             if inst and inst.Parent then
-                inst.Transparency = ot; inst.Color = oc
-                inst.Material = om; inst.Size = os
+                inst.Transparency=ot; inst.Color=oc
+                inst.Material=om;     inst.Size=os
             end
-            STATE.consumed[inst] = nil
+            STATE.consumed[inst]=nil
         end)
     end
 end)()
 
 -- ════════════════════════════════════════════════════════════════════
--- BLOQUE 11: FASES (controla intensidad visual + audio)
+-- BLOQUE 11: FASES
 -- ════════════════════════════════════════════════════════════════════
 local PHASE = {}
 ;(function()
     function PHASE.update()
-        local pc = STATE.partCount
+        local pc       = STATE.partCount
         local newPhase = STATE.currentPhase
-        if pc >= CFG.Phase5At and newPhase < 5 then newPhase = 5
-        elseif pc >= CFG.Phase4At and newPhase < 4 then newPhase = 4
-        elseif pc >= CFG.Phase3At and newPhase < 3 then newPhase = 3
-        elseif pc >= CFG.Phase2At and newPhase < 2 then newPhase = 2
-        elseif pc >= CFG.Phase1At and newPhase < 1 then newPhase = 1
+        if     pc >= CFG.Phase5At and newPhase < 5 then newPhase=5
+        elseif pc >= CFG.Phase4At and newPhase < 4 then newPhase=4
+        elseif pc >= CFG.Phase3At and newPhase < 3 then newPhase=3
+        elseif pc >= CFG.Phase2At and newPhase < 2 then newPhase=2
+        elseif pc >= CFG.Phase1At and newPhase < 1 then newPhase=1
         end
-
-        if newPhase ~= STATE.currentPhase then
-            STATE.currentPhase = newPhase
-            print("[Pibby] FASE "..newPhase)
-
-            local intensity = newPhase / 5
-            TweenService:Create(FX.atmo, TweenInfo.new(3), {
-                Density = 0.1 + intensity*0.35,
-                Haze = intensity*4,
-            }):Play()
-            TweenService:Create(FX.bloom, TweenInfo.new(3), {
-                Intensity = intensity*1.2,
-            }):Play()
-            TweenService:Create(FX.cc, TweenInfo.new(3), {
-                Saturation = -intensity*0.4,
-                Contrast = intensity*0.3,
-                TintColor = UTIL.lerpC(Color3.new(1,1,1), Color3.fromRGB(180,140,200), intensity),
-            }):Play()
-            TweenService:Create(Lighting, TweenInfo.new(3), {
-                Brightness = math.max(0.5, STATE.origLighting.Brightness - intensity*0.6),
-                Ambient = UTIL.lerpC(STATE.origLighting.Ambient, Color3.fromRGB(40,15,55), intensity),
-                FogColor = UTIL.lerpC(STATE.origLighting.FogColor, Color3.fromRGB(50,20,70), intensity),
-                FogEnd = math.max(80, 500 - intensity*400),
-            }):Play()
-
-            -- Audio reacciona a la fase
-            if AUDIO and AUDIO.setIntensity then
-                AUDIO.setIntensity(intensity)
-            end
-        end
+        if newPhase == STATE.currentPhase then return end
+        STATE.currentPhase = newPhase
+        print("[Pibby] FASE "..newPhase)
+        local intensity = newPhase/5
+        TweenService:Create(FX.atmo,  TweenInfo.new(3),
+            {Density=0.1+intensity*0.35, Haze=intensity*4}):Play()
+        TweenService:Create(FX.bloom, TweenInfo.new(3),
+            {Intensity=intensity*1.2}):Play()
+        TweenService:Create(FX.cc,    TweenInfo.new(3), {
+            Saturation = -intensity*0.4,
+            Contrast   =  intensity*0.3,
+            TintColor  = UTIL.lerpC(Color3.new(1,1,1),
+                Color3.fromRGB(180,140,200), intensity),
+        }):Play()
+        TweenService:Create(Lighting, TweenInfo.new(3), {
+            Brightness = math.max(0.5, STATE.origLighting.Brightness - intensity*0.6),
+            Ambient    = UTIL.lerpC(STATE.origLighting.Ambient,
+                Color3.fromRGB(40,15,55),  intensity),
+            FogColor   = UTIL.lerpC(STATE.origLighting.FogColor,
+                Color3.fromRGB(50,20,70),  intensity),
+            FogEnd     = math.max(80, 500 - intensity*400),
+        }):Play()
+        if AUDIO and AUDIO.setIntensity then AUDIO.setIntensity(intensity) end
     end
 end)()
 
 -- ════════════════════════════════════════════════════════════════════
--- BLOQUE 12: WAVES (siembra inicial + olas periódicas)
+-- BLOQUE 12: WAVES
 -- ════════════════════════════════════════════════════════════════════
 local WAVE = {}
 ;(function()
     function WAVE.spawnSeedNear(centerPos, radius)
         radius = radius or 80
-        for _=1, 4 do
+        for _i=1, 4 do   -- FIX: _i en vez de _
             local angle = math.random()*math.pi*2
-            local dist = 20 + math.random()*radius  -- mínimo 20 studs de distancia
+            local dist  = 20 + math.random()*radius
             local probe = centerPos + Vector3.new(
                 math.cos(angle)*dist, 30, math.sin(angle)*dist)
             local sp, sn = UTIL.castSurf(probe, Vector3.new(0,-1,0), 80, UTIL.rpMain)
@@ -13848,18 +13801,20 @@ local WAVE = {}
         if infPart and infPart:IsA("BasePart") then
             origin = infPart.Position
         else
-            local firstPlayer = Players:GetPlayers()[1]
-            if firstPlayer and firstPlayer.Character then
-                local hrp = firstPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then origin = hrp.Position + Vector3.new(0, 0, -40) end
+            local fp = Players:GetPlayers()[1]
+            if fp and fp.Character then
+                local hrp = fp.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then origin = hrp.Position + Vector3.new(0,0,-40) end
             end
-            origin = origin or Vector3.new(0, 50, 0)
+            origin = origin or Vector3.new(0,50,0)
         end
-
-        local sp, sn = UTIL.castSurf(origin + Vector3.new(0,40,0), Vector3.new(0,-1,0), 100, UTIL.rpMain)
+        local sp, sn = UTIL.castSurf(origin+Vector3.new(0,40,0),
+            Vector3.new(0,-1,0), 100, UTIL.rpMain)
         if sp then
             GROW.seed(sp, sn)
-            for _=1, CFG.InitialWaves do WAVE.spawnSeedNear(sp, 60) end
+            for _i=1, CFG.InitialWaves do   -- FIX: _i en vez de _
+                WAVE.spawnSeedNear(sp, 60)
+            end
         end
         STATE.infectionReady = true
         print("[Pibby] Infección iniciada en "..tostring(sp))
@@ -13880,10 +13835,9 @@ end)()
 
     RunService.Heartbeat:Connect(function(dt)
         if not STATE.running or not STATE.infectionReady then return end
-
-        STATE.timerAcc   += dt
-        STATE.waveTimer  += dt
-        STATE.memTimer   += dt
+        STATE.timerAcc    += dt
+        STATE.waveTimer   += dt
+        STATE.memTimer    += dt
         STATE.npcScanTimer += dt
 
         if STATE.timerAcc >= CFG.TickRate then
@@ -13892,14 +13846,12 @@ end)()
             GROW.tickAll()
             GROW.cleanBlobReg()
             PHASE.update()
-
             if #STATE.blobReg > 0 then
-                for _=1, math.min(3, #STATE.blobReg) do
+                for _i=1, math.min(3, #STATE.blobReg) do   -- FIX: _i en vez de _
                     local b = STATE.blobReg[math.random(#STATE.blobReg)]
                     if b then CONSUME.tryAt(b.pos) end
                 end
             end
-
             INFECT.tickContact()
         end
 
@@ -13915,16 +13867,16 @@ end)()
                 if pl.Character then
                     local hrp = pl.Character:FindFirstChild("HumanoidRootPart")
                     if hrp then
-                        table.insert(STATE.playerMem, {pos = hrp.Position, time = t})
+                        table.insert(STATE.playerMem, {pos=hrp.Position, time=t})
                     end
                 end
             end
-            for i = #STATE.playerMem, 1, -1 do
-                if t - STATE.playerMem[i].time > CFG.MemoryDecay then
+            for i=#STATE.playerMem,1,-1 do
+                if t-STATE.playerMem[i].time > CFG.MemoryDecay then
                     table.remove(STATE.playerMem, i)
                 end
             end
-            while #STATE.playerMem > 120 do table.remove(STATE.playerMem, 1) end
+            while #STATE.playerMem > 120 do table.remove(STATE.playerMem,1) end
         end
 
         if STATE.npcScanTimer >= CFG.NpcScanInterval then
@@ -13939,5 +13891,5 @@ end)()
         if AUDIO and AUDIO.stop then AUDIO.stop() end
     end)
 
-    print("[Pibby] v4.1 cargado correctamente. Audio separado + fix anti-huérfanos activo.")
+    print("[Pibby] v4.2 cargado. Fix registros + anti-huérfanos activo.")
 end)()
