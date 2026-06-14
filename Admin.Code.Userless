@@ -53,10 +53,10 @@ end
 -- ════════════════════════════════════════════════════════════════════
 local CFG = {
 	StepSize        = 1.6,
-	TickRate        = 0.8,
+	TickRate        = 0.4,
 	LifeMin         = 20,
 	LifeMax         = 55,
-	BranchChance    = 0.18,
+	BranchChance    = 0.25,
 	BranchDecay     = 0.62,
 	MaxDepth        = 8,
 	MaxNodes        = 60000,
@@ -120,10 +120,10 @@ local CFG = {
 	InitialWaves    = 3,
 	SurvivalistMode = true,  
 	-- NPC
-	NpcCorruptRadius= 8,     -- studs para infectar un NPC
-	NpcChaseSpeed   = 0.85,  -- multiplicador de WalkSpeed del NPC corrupto
-	NpcInfectRadius = 4,     -- studs para que NPC corrupto contagie jugador
-	NpcInfectChance = 0.006,
+	NpcCorruptRadius= 15,     -- studs para infectar un NPC
+	NpcChaseSpeed   = 1.15,  -- multiplicador de WalkSpeed del NPC corrupto
+	NpcInfectRadius = 5,     -- studs para que NPC corrupto contagie jugador
+	NpcInfectChance = 0.015,
 	NpcScanInterval = 4,     -- cada cuántos segundos busca NPCs nuevos
 }
 
@@ -12384,7 +12384,7 @@ end)()
 		infPart.Size        = Vector3.new(4, 4, 4)
 		infPart.Material    = Enum.Material.Neon
 		infPart.Color       = Color3.fromRGB(255, 0, 255)
-		infPart.Transparency= 1   -- empieza invisible
+		infPart.Transparency= 0   -- siempre visible desde el inicio
 
 		-- ── Posición inteligente ──────────────────────────────────────
 		-- Intenta aterrizar sobre el suelo del mapa usando un raycast.
@@ -12433,10 +12433,6 @@ end)()
 
 		-- Aparece la Part "Infeccion"
 		task.delay(0.15, function()
-			TS:Create(infPart, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-				Transparency = 0
-			}):Play()
-
 			-- Pulso de luz en la Part
 			local pLi=Instance.new("PointLight")
 			pLi.Color=Color3.fromRGB(255,0,255); pLi.Range=30; pLi.Brightness=5
