@@ -1,21 +1,52 @@
 --[[
 ╔══════════════════════════════════════════════════════════════════════════════╗
-║  CORRUPCIÓN PIBBY — BIOMASA FÚNGICA v3.1                                    ║
+║  CORRUPCIÓN PIBBY — BIOMASA FÚNGICA v3.5  (Ahriman-Compatible)              ║
 ║  Script dentro de la Part "Infeccion" → arranca solo al darle Play          ║
 ║                                                                              ║
-║  NUEVO EN v3.1:                                                              ║
-║  ✓ Bug blobReg corregido (ya no crashea en checkFruiting)                   ║
-║  ✓ NPCs con Humanoid se corrompen y persiguen jugadores                     ║
-║  ✓ NPCs corruptos contagian a jugadores por contacto                        ║
-║  ✓ Cada jugador infectado recibe una distorsión de pantalla ÚNICA           ║
-║     (Scanlines / Static / Chromatic / Fragmentation / Invert / Zoom)        ║
+║  CHANGELOG:                                                                  ║
+║  v3.5  ✓ Integración con boss Ahriman (CollectionService tag)               ║
+║        ✓ Variable AHRIMAN_COMPATIBLE para activar/desactivar coexistencia   ║
+║        ✓ El virus NO infecta ni corrompe al NPC de Ahriman si está activo   ║
+║        ✓ Función setAhrimanCompatibility(bool) para control desde GitHub    ║
+║  v3.1  ✓ Bug blobReg corregido (ya no crashea en checkFruiting)             ║
+║        ✓ NPCs con Humanoid se corrompen y persiguen jugadores               ║
+║        ✓ NPCs corruptos contagian a jugadores por contacto                  ║
+║        ✓ Cada jugador infectado recibe una distorsión de pantalla ÚNICA     ║
+║           (Scanlines / Static / Chromatic / Fragmentation / Invert / Zoom)  ║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 ]]
 
-local TweenService = game:GetService("TweenService")
-local Players      = game:GetService("Players")
-local RunService   = game:GetService("RunService")
-local Lighting     = game:GetService("Lighting")
+local TweenService      = game:GetService("TweenService")
+local Players           = game:GetService("Players")
+local RunService        = game:GetService("RunService")
+local Lighting          = game:GetService("Lighting")
+local CollectionService = game:GetService("CollectionService")
+
+-- ════════════════════════════════════════════════════════════════════
+--  AHRIMAN COMPATIBILITY LAYER
+--  Cambia AHRIMAN_COMPATIBLE a false para que el virus actúe de
+--  forma 100% independiente, ignorando la existencia de Ahriman.
+--  Cuando está en true, el virus PROTEGE a Ahriman: no lo infecta,
+--  no lo corrompe, y coexiste con sus sistemas.
+-- ════════════════════════════════════════════════════════════════════
+local AHRIMAN_COMPATIBLE = true   -- ← CAMBIA ESTO EN GITHUB
+local AHRIMAN_TAG        = "AhrimanVessel"
+
+--- Cambia la compatibilidad en tiempo de ejecución (solo servidor).
+--- @param enabled boolean  true = protege a Ahriman, false = virus independiente
+local function setAhrimanCompatibility(enabled)
+	AHRIMAN_COMPATIBLE = enabled
+	print("[Pibby] Ahriman compatibility " .. (enabled and "ENABLED" or "DISABLED"))
+end
+
+--- Detecta si un modelo es el NPC de Ahriman (usa CollectionService tag).
+--- @param model Model  El NPC a comprobar
+--- @return boolean  true si el modelo tiene la etiqueta AhrimanVessel
+local function isAhrimanVessel(model)
+	if not AHRIMAN_COMPATIBLE then return false end
+	if not model then return false end
+	return CollectionService:HasTag(model, AHRIMAN_TAG)
+end
 
 -- ════════════════════════════════════════════════════════════════════
 --  CONFIG  (sin tocar)
@@ -595,6 +626,11 @@ local function tryConsume(pos)
 	local inst=r.Instance
 	if not inst or not inst:IsA("BasePart") then return end
 	if inst.Name=="Baseplate" or inst:FindFirstAncestor("PibbyFolder") then return end
+	-- ── AHRIMAN GUARD: no consumir partes del boss ──
+	if AHRIMAN_COMPATIBLE then
+		local ancestor = inst:FindFirstAncestorWhichIsA("Model")
+		if ancestor and isAhrimanVessel(ancestor) then return end
+	end
 	if consumed[inst] or inst.Locked or not inst.Anchored then return end
 	consumed[inst]=true
 	task.spawn(function()
@@ -883,6 +919,8 @@ end
 
 local function corruptNpc(model)
 	if infectedNpcs[model] then return end
+	-- ── AHRIMAN GUARD: nunca corromper al boss ──
+	if isAhrimanVessel(model) then return end
 	local hum=model:FindFirstChildOfClass("Humanoid")
 	local hrp=model:FindFirstChild("HumanoidRootPart")
 	if not hum or not hrp then return end
@@ -993,6 +1031,8 @@ local function scanNpcs()
 	-- Busca Humanoids en workspace que no sean jugadores
 	for _,obj in ipairs(workspace:GetDescendants()) do
 		if obj:IsA("Model") and not isPlayerCharacter(obj) and not infectedNpcs[obj] then
+			-- ── AHRIMAN GUARD: saltar el boss ──
+			if isAhrimanVessel(obj) then continue end
 			local hum=obj:FindFirstChildOfClass("Humanoid")
 			local hrp=obj:FindFirstChild("HumanoidRootPart")
 			if hum and hrp then
@@ -1914,8 +1954,6 @@ local function trySpawnAerial(pos)
 	for seg = 1, math.min(segs, 8) do
 		if partCount >= CFG.MaxParts then break end
 		local frac  = seg / segs
-		local segPos = lerpC(Color3.new(ceilPos.X/255,ceilPos.Y/255,ceilPos.Z/255),
-			Color3.new(pos.X/255,pos.Y/255,pos.Z/255), frac)  -- dummy, usamos lerp manual
 		local p3 = ceilPos + (pos - ceilPos) * frac
 		-- Pequeño blob/tendril colgante
 		local hang = Instance.new("Part")
@@ -2072,7 +2110,7 @@ local function buildInfectionHud(player)
 
 	-- Label de stage
 	local stLbl = Instance.new("TextLabel"); stLbl.Name = "stage"
-	stLbl.Size = UDim2.new(0,160,0,14); stLbl.Position = UDim2.new(0,12,1,-56,0,0)
+	stLbl.Size = UDim2.new(0,160,0,14); stLbl.Position = UDim2.new(0,12,1,-56)
 	stLbl.BackgroundTransparency = 1
 	stLbl.Text = ""; stLbl.TextColor3 = rN()
 	stLbl.TextSize = 9; stLbl.Font = Enum.Font.Code
@@ -3073,6 +3111,11 @@ local function wrapBlock(part)
 	if not (part and part.Parent) then return end
 	if wrappedObjects[part] then return end
 	if part:FindFirstAncestor("PibbyFolder") then return end
+	-- ── AHRIMAN GUARD: no envolver partes del boss ──
+	if AHRIMAN_COMPATIBLE then
+		local ancestor = part:FindFirstAncestorWhichIsA("Model")
+		if ancestor and isAhrimanVessel(ancestor) then return end
+	end
 	if part.Name == "Baseplate" then return end
 	if part.Locked then return end
 	if partCount >= CFG.MaxParts - 12 then return end
@@ -12814,7 +12857,7 @@ end)()
 	end)
 
 	print("╔══════════════════════════════════════════════════════════════════╗")
-	print("║  PIBBY v3.25 — OPTIMIZACIÓN COMPLETA                           ║")
+	print("║  PIBBY v3.5 — AHRIMAN-COMPATIBLE EDITION                       ║")
 	print("║  [Todos los modos]                                              ║")
 	print("║  ✦ Blobs oscuros gigantes — cap de radio por fase              ║")
 	print("║    Fase 3+: blobs oscuros ≤ 1.8 studs, normales ≤ 2.5         ║")
@@ -12826,6 +12869,9 @@ end)()
 	print("║  ✦ Bioluminiscencia cada 5 min (pulsos morados conservados)    ║")
 	print("║  ✦ Luces de esporas se desvanecen durante el vuelo             ║")
 	print("║  ✦ Vigilancia pasiva: elimina luces residuales cada 8s        ║")
+	print("║  [Ahriman]                                                      ║")
+	print("║  ✦ AHRIMAN_COMPATIBLE = " .. tostring(AHRIMAN_COMPATIBLE) .. string.rep(" ", 37 - #tostring(AHRIMAN_COMPATIBLE)) .. "║")
+	print("║  ✦ Tag: " .. AHRIMAN_TAG .. string.rep(" ", 52 - #AHRIMAN_TAG) .. "║")
 	print("╚══════════════════════════════════════════════════════════════════╝")
 
 end)()
