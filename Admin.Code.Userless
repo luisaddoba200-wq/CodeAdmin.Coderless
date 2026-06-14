@@ -20,7 +20,6 @@ local TweenService      = game:GetService("TweenService")
 local Players           = game:GetService("Players")
 local RunService        = game:GetService("RunService")
 local Lighting          = game:GetService("Lighting")
-local CollectionService = game:GetService("CollectionService")
 
 -- ════════════════════════════════════════════════════════════════════
 --  AHRIMAN COMPATIBILITY LAYER
@@ -29,12 +28,13 @@ local CollectionService = game:GetService("CollectionService")
 --  Cuando está en true, el virus PROTEGE a Ahriman: no lo infecta,
 --  no lo corrompe, y coexiste con sus sistemas.
 -- ════════════════════════════════════════════════════════════════════
-local AHRIMAN_COMPATIBLE = true   -- ← CAMBIA ESTO EN GITHUB
-local AHRIMAN_TAG        = "AhrimanVessel"
+AHRIMAN_COMPATIBLE = true   -- ← CAMBIA ESTO EN GITHUB
+AHRIMAN_TAG        = "AhrimanVessel"
+CollectionService  = game:GetService("CollectionService")
 
 --- Cambia la compatibilidad en tiempo de ejecución (solo servidor).
 --- @param enabled boolean  true = protege a Ahriman, false = virus independiente
-local function setAhrimanCompatibility(enabled)
+function setAhrimanCompatibility(enabled)
 	AHRIMAN_COMPATIBLE = enabled
 	print("[Pibby] Ahriman compatibility " .. (enabled and "ENABLED" or "DISABLED"))
 end
@@ -42,7 +42,7 @@ end
 --- Detecta si un modelo es el NPC de Ahriman (usa CollectionService tag).
 --- @param model Model  El NPC a comprobar
 --- @return boolean  true si el modelo tiene la etiqueta AhrimanVessel
-local function isAhrimanVessel(model)
+function isAhrimanVessel(model)
 	if not AHRIMAN_COMPATIBLE then return false end
 	if not model then return false end
 	return CollectionService:HasTag(model, AHRIMAN_TAG)
