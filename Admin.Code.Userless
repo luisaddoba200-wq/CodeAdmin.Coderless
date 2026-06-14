@@ -28,7 +28,7 @@ local Lighting          = game:GetService("Lighting")
 --  Cuando está en true, el virus PROTEGE a Ahriman: no lo infecta,
 --  no lo corrompe, y coexiste con sus sistemas.
 -- ════════════════════════════════════════════════════════════════════
-AHRIMAN_COMPATIBLE = true   -- ← CAMBIA ESTO EN GITHUB
+AHRIMAN_COMPATIBLE = false   -- ← CAMBIA ESTO EN GITHUB
 AHRIMAN_TAG        = "AhrimanVessel"
 CollectionService  = game:GetService("CollectionService")
 
