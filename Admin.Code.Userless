@@ -309,7 +309,7 @@ local function spawnTendril(from,to,sn,age,isNeon,isRhizo)
 	if isNeon then p.Color=rN(); p.Material=Enum.Material.Neon
 	elseif isRhizo then p.Color=rR(); p.Material=Enum.Material.SmoothPlastic
 	else p.Color=mycelColor(age); p.Material=age>0.72 and Enum.Material.SmoothPlastic or Enum.Material.Fabric end
-	p.Transparency=1; p.Parent=folder; partCount+=1
+	p.Transparency=1; p.Parent=folder; partCount = partCount + 1
 	TweenService:Create(p,TweenInfo.new(0.20),{Transparency=isNeon and 0 or (isRhizo and 0.08 or 0.04)}):Play()
 	if isRhizo then
 		local li=Instance.new("PointLight"); li.Color=Color3.fromRGB(110,0,190); li.Range=5; li.Brightness=0.35; li.Parent=p
@@ -343,7 +343,7 @@ local function spawnBlob(pos,normal,radius,ageFrac)
 	local isNeon=math.random()<0.09
 	p.Color=isNeon and rN() or (ageFrac>0.42 and rD() or mycelColor(ageFrac))
 	p.Material=isNeon and Enum.Material.Neon or Enum.Material.SmoothPlastic
-	p.Transparency=1; p.Parent=folder; partCount+=1
+	p.Transparency=1; p.Parent=folder; partCount = partCount + 1
 	TweenService:Create(p,TweenInfo.new(0.38,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Transparency=isNeon and 0 or 0.04}):Play()
 	-- ── FIX: insertamos en blobReg con tick() global, sin iterar ──
 	table.insert(blobReg,{pos=pos,time=tick()})
@@ -373,7 +373,7 @@ local function spawnFlash(pos,normal,scale)
 	local p=Instance.new("Part"); p.Anchored=true; p.CanCollide=false; p.CastShadow=false
 	p.Shape=Enum.PartType.Ball; p.Size=Vector3.new(0.35,0.35,0.35)*scale
 	p.Position=pos+normal*0.35; p.Color=rN(); p.Material=Enum.Material.Neon; p.Transparency=0
-	p.Parent=folder; partCount+=1
+	p.Parent=folder; partCount = partCount + 1
 	local li=Instance.new("PointLight"); li.Color=p.Color; li.Range=14*scale; li.Brightness=3; li.Parent=p
 	TweenService:Create(p,TweenInfo.new(0.28),{Size=Vector3.new(4.5,4.5,4.5)*scale,Transparency=1}):Play()
 	TweenService:Create(li,TweenInfo.new(0.28),{Brightness=0}):Play()
@@ -397,7 +397,7 @@ end
 local function getBlobDensity(pos,radius)
 	local count=0
 	for _,b in ipairs(blobReg) do
-		if (b.pos-pos).Magnitude<radius then count+=1 end
+		if (b.pos-pos).Magnitude<radius then count = count + 1 end
 	end
 	return count
 end
@@ -433,7 +433,7 @@ local function buildFruitingBody(pos,normal)
 	local segs=math.random(3,CFG.FruitSegMax)
 	for seg=1,segs do
 		if partCount>=CFG.MaxParts then break end
-		local sh=ft.segH(); local sw=ft.stalkW()*(1-(seg/segs)*0.35); totalH+=sh
+		local sh=ft.segH(); local sw=ft.stalkW()*(1-(seg/segs)*0.35); totalH = totalH + sh
 		local up=normal; local fwd=up:Cross(Vector3.new(1,0,0))
 		fwd=fwd.Magnitude<0.001 and up:Cross(Vector3.new(0,0,1)) or fwd.Unit
 		local sp=Instance.new("Part"); sp.Anchored=true; sp.CanCollide=false; sp.CastShadow=false
@@ -442,7 +442,7 @@ local function buildFruitingBody(pos,normal)
 		local isN=(seg==segs) and math.random()<0.28; local tf=seg/segs
 		sp.Color=isN and rN() or lerpC(ft.col(),rD(),tf*0.65)
 		sp.Material=isN and Enum.Material.Neon or Enum.Material.SmoothPlastic
-		sp.Transparency=1; sp.Parent=folder; partCount+=1
+		sp.Transparency=1; sp.Parent=folder; partCount = partCount + 1
 		task.delay(seg*0.12,function()
 			if sp and sp.Parent then
 				TweenService:Create(sp,TweenInfo.new(0.55,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Transparency=isN and 0 or 0.06}):Play()
@@ -457,7 +457,7 @@ local function buildFruitingBody(pos,normal)
 		cap.Anchored=true; cap.CanCollide=false; cap.CastShadow=false
 		cap.Size=Vector3.new(cr*2,ch*1.4,cr*2)
 		cap.CFrame=CFrame.fromMatrix(pos+normal*(totalH+ch*0.5),fwd:Cross(up).Unit,up)
-		cap.Color=rN(); cap.Material=Enum.Material.Neon; cap.Transparency=1; cap.Parent=folder; partCount+=1
+		cap.Color=rN(); cap.Material=Enum.Material.Neon; cap.Transparency=1; cap.Parent=folder; partCount = partCount + 1
 		local cl=Instance.new("PointLight"); cl.Color=cap.Color; cl.Range=20; cl.Brightness=2.5; cl.Parent=cap
 		task.delay(segs*0.12+0.18,function()
 			if cap and cap.Parent then TweenService:Create(cap,TweenInfo.new(0.6,Enum.EasingStyle.Back,Enum.EasingDirection.Out),{Transparency=0.04}):Play() end
@@ -475,14 +475,14 @@ local function buildFruitingBody(pos,normal)
 end
 
 local function checkFruiting(dt)
-	fruitTimer+=dt; if fruitTimer<CFG.FruitCooldown then return end
+	fruitTimer = fruitTimer + dt; if fruitTimer<CFG.FruitCooldown then return end
 	fruitTimer=0
 	if partCount>=CFG.MaxParts-30 or #fruitBodies>=CFG.FruitMaxBodies then return end
 	-- Limpieza de blobReg (aquí es seguro porque no estamos iterando nodes ni spores)
 	cleanBlobReg()
 	local checked=0
 	for i=#blobReg,math.max(1,#blobReg-60),-1 do
-		checked+=1
+		checked = checked + 1
 		local b=blobReg[i]
 		if b and b.time and (tick()-b.time)<70 and getBlobDensity(b.pos,CFG.FruitRadius)>=CFG.FruitDensity then
 			local tooClose=false
@@ -501,7 +501,7 @@ end
 local function tickFruitBodies(dt)
 	local dead={}
 	for idx,fb in ipairs(fruitBodies) do
-		fb.sporeT+=dt
+		fb.sporeT = fb.sporeT + dt
 		if fb.sporeT>=fb.ft.sporePeriod then
 			fb.sporeT=0
 			if #fb.parts>0 then
@@ -529,7 +529,7 @@ local function launchSpore(fromPos,fromNormal)
 	local sp=Instance.new("Part"); sp.Anchored=true; sp.CanCollide=false; sp.CastShadow=false
 	sp.Shape=Enum.PartType.Ball; sp.Size=Vector3.new(0.28,0.28,0.28)
 	sp.Position=fromPos+fromNormal*1.2; sp.Color=rN(); sp.Material=Enum.Material.Neon; sp.Transparency=0.15
-	sp.Parent=folder; partCount+=1; sporeCount+=1
+	sp.Parent=folder; partCount = partCount + 1; sporeCount = sporeCount + 1
 	local sl=Instance.new("PointLight"); sl.Color=sp.Color; sl.Range=7; sl.Brightness=1.2; sl.Parent=sp
 	local ft=CFG.SporeFlightMin+math.random()*(CFG.SporeFlightMax-CFG.SporeFlightMin)
 	local midH=CFG.SporeArcHeight*(0.45+math.random()*0.55)
@@ -581,7 +581,7 @@ local function updateSpores(dt)
 			local tr=Instance.new("Part"); tr.Anchored=true; tr.CanCollide=false; tr.CastShadow=false
 			tr.Shape=Enum.PartType.Ball; tr.Size=Vector3.new(0.10,0.10,0.10)
 			tr.Position=s.part.Position; tr.Color=s.part.Color; tr.Material=Enum.Material.Neon; tr.Transparency=0.4
-			tr.Parent=folder; partCount+=1; table.insert(s.trail,tr)
+			tr.Parent=folder; partCount = partCount + 1; table.insert(s.trail,tr)
 			TweenService:Create(tr,TweenInfo.new(0.75),{Transparency=1,Size=Vector3.new(0.01,0.01,0.01)}):Play()
 			task.delay(0.82,function() if tr and tr.Parent then tr:Destroy(); partCount=math.max(0,partCount-1) end end)
 		end
@@ -611,7 +611,7 @@ local function triggerBioPulse(origin)
 	end
 end
 local function tickBioLum(dt)
-	bioTimer+=dt; if bioTimer<CFG.BioInterval then return end
+	bioTimer = bioTimer + dt; if bioTimer<CFG.BioInterval then return end
 	bioTimer=0; if #blobReg>0 then triggerBioPulse(blobReg[math.random(#blobReg)].pos) end
 end
 
@@ -1625,7 +1625,7 @@ end
 --  TICK DEL MICELIO
 -- ════════════════════════════════════════════════════════════════════
 local function tickMycelium()
-	if clashCooldown>0 then clashCooldown-=1 end
+	if clashCooldown>0 then clashCooldown = clashCooldown - 1 end
 	local nxt={}
 	for _,node in ipairs(nodes) do
 		if node.life<=0 then
@@ -1680,7 +1680,7 @@ end
 --  HEARTBEAT
 -- ════════════════════════════════════════════════════════════════════
 RunService.Heartbeat:Connect(function(dt)
-	timer_acc+=dt; waveTimer+=dt; memTimer+=dt; npcScanTimer+=dt
+	timer_acc = timer_acc + dt; waveTimer = waveTimer + dt; memTimer = memTimer + dt; npcScanTimer = npcScanTimer + dt
 
 	if infectionReady then
 		if timer_acc>=CFG.TickRate then
@@ -1700,7 +1700,7 @@ RunService.Heartbeat:Connect(function(dt)
 	updateSpores(dt); tickFruitBodies(dt); processFruitPending()
 	checkFruiting(dt); tickBioLum(dt); tickSpread()
 
-	gridCleanT+=dt
+	gridCleanT = gridCleanT + dt
 	if gridCleanT>=90 then
 		gridCleanT=0
 		if partCount<CFG.MaxParts*0.4 then spatialGrid={} end
@@ -1784,7 +1784,7 @@ local function triggerNetworkPulse()
 end
 
 local function tickNetworkPulse(dt)
-	networkPulseT += dt
+	networkPulseT = networkPulseT + dt
 	local interval = 8 - currentPhase * 1.2  -- más rápido en fases altas
 	if networkPulseT >= math.max(2, interval) then
 		networkPulseT = 0
@@ -1809,7 +1809,7 @@ local function spawnCorruptionCluster(pos, normal)
 	cp.CFrame = CFrame.fromMatrix(pos + normal*cy, br, normal, -br:Cross(normal).Unit)
 		* CFrame.Angles(math.random()*math.pi, math.random()*math.pi*2, 0)
 	cp.Color = rD(); cp.Material = Enum.Material.SmoothPlastic
-	cp.Transparency = 1; cp.Parent = folder; partCount += 1
+	cp.Transparency = 1; cp.Parent = folder; partCount = partCount + 1
 
 	TweenService:Create(cp, TweenInfo.new(0.8, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 		{Transparency = 0.05}):Play()
@@ -1833,7 +1833,7 @@ local function spawnCorruptionCluster(pos, normal)
 		local isN = math.random() < 0.18
 		sp.Color = isN and rN() or rD()
 		sp.Material = isN and Enum.Material.Neon or Enum.Material.SmoothPlastic
-		sp.Transparency = 1; sp.Parent = folder; partCount += 1
+		sp.Transparency = 1; sp.Parent = folder; partCount = partCount + 1
 		task.delay(math.random()*0.5, function()
 			if sp and sp.Parent then
 				TweenService:Create(sp, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -1860,7 +1860,7 @@ local function spawnCorruptionCluster(pos, normal)
 end
 
 local function tickClusterScan(dt)
-	clusterScanT += dt
+	clusterScanT = clusterScanT + dt
 	if clusterScanT < 12 then return end
 	clusterScanT = 0
 	if partCount >= CFG.MaxParts - 10 then return end
@@ -1917,7 +1917,7 @@ local function tryAnastomosis()
 				p.CFrame = CFrame.fromMatrix(mid, right, look:Cross(right).Unit)
 				p.Color = lerpC(rD(), Color3.fromRGB(120,0,200), 0.4)
 				p.Material = Enum.Material.SmoothPlastic
-				p.Transparency = 1; p.Parent = folder; partCount += 1
+				p.Transparency = 1; p.Parent = folder; partCount = partCount + 1
 				TweenService:Create(p, TweenInfo.new(0.3), {Transparency=0.12}):Play()
 
 				-- Pequeño flash en el punto de fusión
@@ -1964,7 +1964,7 @@ local function trySpawnAerial(pos)
 		hang.Color = mycelColor(0.25 + frac*0.5)
 		hang.Material = Enum.Material.Fabric
 		hang.Transparency = 0.15 + frac*0.35
-		hang.Parent = folder; partCount += 1
+		hang.Parent = folder; partCount = partCount + 1
 
 		-- Parpadeo ocasional
 		if frac > 0.7 and math.random() < 0.15 then
@@ -1983,7 +1983,7 @@ local function trySpawnAerial(pos)
 end
 
 local function tickAerial(dt)
-	aerialT += dt
+	aerialT = aerialT + dt
 	if aerialT < 0.8 then return end
 	aerialT = 0
 	if #blobReg == 0 then return end
@@ -2222,7 +2222,7 @@ local function startParasiteControl(player)
 
 			while tick()-t0 < dur and char and char.Parent and infected[player] do
 				-- Gira y mueve en dirección aleatoria cambiante
-				angle += (math.random()-0.5)*1.2
+				angle = angle + (math.random()-0.5)*1.2
 				local moveDir = Vector3.new(math.cos(angle), 0, math.sin(angle))
 				hum:Move(moveDir, false)
 
@@ -2334,7 +2334,7 @@ RunService.Heartbeat:Connect(function(dt)
 	updateInfectionPct(dt)
 
 	-- Anastomosis: cuando hay nodos muertos, los registra
-	v32_timer += dt
+	v32_timer = v32_timer + dt
 	if v32_timer >= 2.5 then
 		v32_timer = 0
 		-- Recoge posiciones de blobs recientes como candidatos
@@ -2344,7 +2344,7 @@ RunService.Heartbeat:Connect(function(dt)
 		end
 		-- Intenta anastomosis
 		if #anastomosisReg >= 2 then tryAnastomosis() end
-		anastomosisT += 2.5
+		anastomosisT = anastomosisT + 2.5
 	end
 
 	-- Actualiza velocidad de expansión según fase
@@ -2406,10 +2406,10 @@ local function analyzeSurroundings(pos, searchRadius)
 	for _, dir in ipairs(PROBE_DIRS) do
 		local kind, spos, snorm, dist = probeDirection(pos, dir, searchRadius)
 		if kind == "surface" then
-			wallCount += 1
+			wallCount = wallCount + 1
 			table.insert(surfaces, {pos=spos, normal=snorm, dir=dir, dist=dist})
 		else
-			openCount += 1
+			openCount = openCount + 1
 			table.insert(exits, {dir=dir, pos=spos, dist=dist})
 		end
 	end
@@ -2528,7 +2528,7 @@ end
 --  TICK DE PRESIÓN
 -- ════════════════════════════════════════════════════════════════════
 local function tickPressure(dt)
-	pressureTimer += dt
+	pressureTimer = pressureTimer + dt
 	if pressureTimer < 0.35 then return end
 	pressureTimer = 0
 
@@ -2551,7 +2551,7 @@ local function tickPressure(dt)
 	end
 
 	-- Flash sutil en zonas de alta presión (visual feedback)
-	pressureFlashT += dt
+	pressureFlashT = pressureFlashT + dt
 	if pressureFlashT > 1.2 then
 		pressureFlashT = 0
 		for _, data in pairs(pressureMap) do
@@ -2565,7 +2565,7 @@ local function tickPressure(dt)
 				pfl.Position=data.pos+Vector3.new(0,0.4,0)
 				pfl.Color=lerpC(Color3.fromRGB(120,0,200), Color3.fromRGB(255,0,255), intensity)
 				pfl.Material=Enum.Material.Neon; pfl.Transparency=0.3
-				pfl.Parent=folder; partCount+=1
+				pfl.Parent=folder; partCount = partCount + 1
 				local pli=Instance.new("PointLight"); pli.Color=pfl.Color
 				pli.Range=8+intensity*12; pli.Brightness=1.5+intensity*2; pli.Parent=pfl
 				TweenService:Create(pfl,TweenInfo.new(0.6),{Size=Vector3.new(intensity*3,intensity*3,intensity*3),Transparency=1}):Play()
@@ -2652,7 +2652,7 @@ function tickMycelium()
 	for _, bn in ipairs(burstNext) do table.insert(nodes, bn) end
 
 	-- ── Detección de nodos atrapados (muestreo cada N nodos) ──────────
-	nodeAnalysisCounter += 1
+	nodeAnalysisCounter = nodeAnalysisCounter + 1
 	if nodeAnalysisCounter < NODE_ANALYSIS_FREQ then return end
 	nodeAnalysisCounter = 0
 
@@ -2679,7 +2679,7 @@ function tickMycelium()
 			}) do
 			local kind, spos, snorm, dist = probeDirection(node.pos, dir, 20)
 			if kind == "surface" then
-				blockedCount += 1
+				blockedCount = blockedCount + 1
 			else
 				if dist > bestExitDist then
 					bestExitDist = dist
@@ -2744,7 +2744,7 @@ local function updatePressureVisuals()
 				local anchor = Instance.new("Part")
 				anchor.Anchored=true; anchor.CanCollide=false; anchor.Transparency=1
 				anchor.Size=Vector3.new(0.1,0.1,0.1); anchor.Position=data.pos+Vector3.new(0,2,0)
-				anchor.Parent=folder; partCount+=1
+				anchor.Parent=folder; partCount = partCount + 1
 
 				local bb=Instance.new("BillboardGui"); bb.Size=UDim2.new(0,80,0,20)
 				bb.StudsOffset=Vector3.new(0,2,0); bb.AlwaysOnTop=false; bb.Parent=anchor
@@ -2788,9 +2788,9 @@ local function detectRoom(pos)
 	for _, data in pairs(pressureMap) do
 		local d = (data.pos - pos).Magnitude
 		if d < 20 then
-			nearCount += 1
-			totalPressure += data.pressure
-			centerSum += data.pos
+			nearCount = nearCount + 1
+			totalPressure = totalPressure + data.pressure
+			centerSum = centerSum + data.pos
 		end
 	end
 
@@ -2810,7 +2810,7 @@ end
 local roomScanTimer = 0
 
 local function tickRoomDetection(dt)
-	roomScanTimer += dt
+	roomScanTimer = roomScanTimer + dt
 	if roomScanTimer < 5 then return end
 	roomScanTimer = 0
 
@@ -2949,7 +2949,7 @@ RunService.Heartbeat:Connect(function(dt)
 	tickRoomDetection(dt)
 
 	-- Actualiza visuales de presión cada 2s aprox
-	pressureFlashT += dt
+	pressureFlashT = pressureFlashT + dt
 	if pressureFlashT > 2.0 then
 		pressureFlashT = 0
 		updatePressureVisuals()
@@ -3199,7 +3199,7 @@ end
 -- Tick del sistema de envolvimiento
 local wrapScanT = 0
 local function tickWrapScan(dt)
-	wrapScanT += dt
+	wrapScanT = wrapScanT + dt
 	if wrapScanT < 3.5 then return end
 	wrapScanT = 0
 
@@ -3285,7 +3285,7 @@ local function tryCornerBridge(pos, normal, dir)
 	local right = normal:Cross(look); right = right.Magnitude<0.001 and Vector3.new(1,0,0) or right.Unit
 	p.CFrame = CFrame.fromMatrix((pos+bridgeTarget)/2, right, look:Cross(right).Unit)
 	p.Color = mycelColor(0.5); p.Material = Enum.Material.Fabric
-	p.Transparency = 1; p.Parent = folder; partCount += 1
+	p.Transparency = 1; p.Parent = folder; partCount = partCount + 1
 	TweenService:Create(p, TweenInfo.new(0.25), {Transparency=0.18}):Play()
 end
 
@@ -3340,7 +3340,7 @@ function tickMycelium()
 	_v33TickMyceliumFull()
 
 	-- Post-proceso: corner bridges y hang-over en nodos activos
-	cornerBridgeT += 1
+	cornerBridgeT = cornerBridgeT + 1
 	if cornerBridgeT >= 8 then  -- cada 8 ticks
 		cornerBridgeT = 0
 		local sample = math.min(4, #nodes)
@@ -3362,7 +3362,7 @@ end
 local crackTimer = 0
 
 local function scanForCracks(dt)
-	crackTimer += dt
+	crackTimer = crackTimer + dt
 	if crackTimer < 5 then return end
 	crackTimer = 0
 	if partCount >= CFG.MaxParts - 8 then return end
@@ -3403,7 +3403,7 @@ local function scanForCracks(dt)
 					crack.CFrame = CFrame.new(crackCenter)
 						* CFrame.fromMatrix(Vector3.new(0,0,0), perp, crackNorm, dir)
 					crack.Transparency = 0.12
-					crack.Parent = folder; partCount += 1
+					crack.Parent = folder; partCount = partCount + 1
 
 					-- Desde la grieta lanza nodos al otro lado
 					local exitPos = r1.Position + dir*(gapSize*0.5)
@@ -3460,7 +3460,7 @@ local function tryVerticalFall(pos, normal, dir)
 			vf.Color = mycelColor(0.35 + frac*0.5)
 			vf.Material = Enum.Material.Fabric
 			vf.Transparency = 0.1 + frac*0.3
-			vf.Parent = folder; partCount += 1
+			vf.Parent = folder; partCount = partCount + 1
 		end
 
 		-- Nodo en el suelo al final de la caída
@@ -3557,7 +3557,7 @@ local function assimilateObject(part, contactPos, contactNorm)
 end
 
 local function tickAssimilation(dt)
-	assimTimer += dt
+	assimTimer = assimTimer + dt
 	if assimTimer < 1.8 then return end
 	assimTimer = 0
 
@@ -3596,7 +3596,7 @@ local function checkCornerExplosion(pos, normal)
 	-- Cuenta cuántos tendrils hay muy cerca
 	local nearCount = 0
 	for _, tr in ipairs(tendrilRegistry) do
-		if (tr.pos - pos).Magnitude < 2.5 then nearCount += 1 end
+		if (tr.pos - pos).Magnitude < 2.5 then nearCount = nearCount + 1 end
 	end
 
 	if nearCount >= 8 then  -- muy denso → explosión
@@ -3624,15 +3624,15 @@ RunService.Heartbeat:Connect(function(dt)
 	tickAssimilation(dt)
 	scanForCracks(dt)
 
-	if cornerExplosionCooldown > 0 then cornerExplosionCooldown -= 1 end
-	if collisionCacheT > 0 then collisionCacheT -= dt end
+	if cornerExplosionCooldown > 0 then cornerExplosionCooldown = cornerExplosionCooldown - 1 end
+	if collisionCacheT > 0 then collisionCacheT = collisionCacheT - dt end
 	if collisionCacheT <= 0 then
 		collisionCache = {}
 		collisionCacheT = 5
 	end
 
 	-- Caídas verticales periódicas
-	hangOverT += dt
+	hangOverT = hangOverT + dt
 	if hangOverT > 1.2 then
 		hangOverT = 0
 		if #nodes > 0 and math.random() < 0.18 then
@@ -3733,13 +3733,13 @@ end
 -- Aplica velocidad de expansión por fase al timer principal
 local _v35TimerAcc = 0
 RunService.Heartbeat:Connect(function(dt)
-	_v35TimerAcc += dt
+	_v35TimerAcc = _v35TimerAcc + dt
 	-- Ajuste dinámico del TickRate según la fase
 	-- (se aplica además del v32 que calcula expandSpeed)
 	if currentPhase >= 1 then
 		local speedMult = PHASE_SPEED[math.clamp(currentPhase, 1, 5)]
 		-- Adelanta el timer para que el micelio tick más rápido
-		timer_acc += dt * (1 - speedMult) * 0.5
+		timer_acc = timer_acc + dt * (1 - speedMult) * 0.5
 	end
 end)
 
@@ -3747,7 +3747,7 @@ end)
 local ambientSporeT = 0
 local function tickAmbientSpores(dt)
 	if currentPhase < 2 then return end
-	ambientSporeT += dt
+	ambientSporeT = ambientSporeT + dt
 	if ambientSporeT < (5 - currentPhase*0.8) then return end
 	ambientSporeT = 0
 
@@ -3767,7 +3767,7 @@ local function tickAmbientSpores(dt)
 		(math.random()-0.5)*12
 	)
 	p.Color = rN(); p.Material = Enum.Material.Neon; p.Transparency = 0.2
-	p.Parent = folder; partCount += 1
+	p.Parent = folder; partCount = partCount + 1
 
 	local li = Instance.new("PointLight"); li.Color=p.Color
 	li.Range=3; li.Brightness=0.8; li.Parent=p
@@ -3829,7 +3829,7 @@ end
 -- entre dos jugadores infectados en stages altos)
 local mycelTrailT = 0
 local function tickMycelTrail(dt)
-	mycelTrailT += dt
+	mycelTrailT = mycelTrailT + dt
 	if mycelTrailT < 3 then return end
 	mycelTrailT = 0
 
@@ -3874,7 +3874,7 @@ end
 local baseplateT = 0
 local function tickBaseplatePulse(dt)
 	if currentPhase < 3 then return end
-	baseplateT += dt
+	baseplateT = baseplateT + dt
 	if baseplateT < 3.5 - currentPhase*0.4 then return end
 	baseplateT = 0
 
@@ -3893,7 +3893,7 @@ end
 local ecoT = 0
 local function tickMycelEcho(dt)
 	if currentPhase < 4 then return end
-	ecoT += dt
+	ecoT = ecoT + dt
 	if ecoT < 1.5 then return end
 	ecoT = 0
 
@@ -4181,7 +4181,7 @@ end
 -- Escanea bloques en el camino entre el micelio y los jugadores
 local function tickDestroyPath(dt)
 	if currentPhase < 3 then return end
-	destroyScanT += dt
+	destroyScanT = destroyScanT + dt
 	if destroyScanT < 2.2 then return end
 	destroyScanT = 0
 
@@ -4243,7 +4243,7 @@ local function tickDestroyPath(dt)
 		local entry = table.remove(destroyQueue, 1)
 		if entry and entry.part and entry.part.Parent then
 			destroyBlockForPath(entry.part, entry.targetPos)
-			processed += 1
+			processed = processed + 1
 		end
 	end
 end
@@ -4395,7 +4395,7 @@ end
 
 local function tickScriptSabotage(dt)
 	if currentPhase < 3 then return end
-	sabotageT += dt
+	sabotageT = sabotageT + dt
 	-- Fase 3: cada 8s sabotea 1 script  |  Fase 4: cada 4s  |  Fase 5: cada 1.5s
 	local interval = currentPhase >= 5 and 1.5 or (currentPhase >= 4 and 4 or 8)
 	if sabotageT < interval then return end
@@ -4654,7 +4654,7 @@ print("╚═══════════════════════�
 
 	-- Efecto visual en las zonas de cuarentena
 	local function tickQuarantineVFX(dt)
-		quarantineScanT += dt
+		quarantineScanT = quarantineScanT + dt
 		if quarantineScanT < 5 then return end
 		quarantineScanT = 0
 		refreshQuarantine()
@@ -4669,7 +4669,7 @@ print("╚═══════════════════════�
 					p.Shape=Enum.PartType.Ball; p.Size=Vector3.new(z.radius*2+0.3, 0.12, z.radius*2+0.3)
 					p.Position = z.pos; p.Color = Color3.fromRGB(0,255,80)
 					p.Material = Enum.Material.Neon; p.Transparency=0.3
-					p.Parent = folder; partCount+=1
+					p.Parent = folder; partCount = partCount + 1
 					TweenService:Create(p, TweenInfo.new(1.2), {Transparency=1, Size=p.Size*1.08}):Play()
 					task.delay(1.3, function() if p then p:Destroy(); partCount=math.max(0,partCount-1) end end)
 				end)
@@ -4724,7 +4724,7 @@ print("╚═══════════════════════�
 
 	-- El micelio "florece" desde rutas calientes periódicamente
 	local function tickPathMemory(dt)
-		pathMemT += dt
+		pathMemT = pathMemT + dt
 		if pathMemT < 6 then return end
 		pathMemT = 0
 
@@ -4868,7 +4868,7 @@ print("╚═══════════════════════�
 
 	local function tickSkyGlitch(dt)
 		if currentPhase < 2 then return end
-		skyGlitchT += dt
+		skyGlitchT = skyGlitchT + dt
 		-- Frecuencia: fase 2 cada ~12s, fase 5 cada ~1.5s
 		local freq = math.max(1.5, 14 - currentPhase*2.5)
 		if skyGlitchT < freq then return end
@@ -4912,7 +4912,7 @@ print("╚═══════════════════════�
 			sp.Position = bp.Position + off
 			sp.Color = math.random()<0.6 and rN() or mycelColor(0.3+math.random()*0.5)
 			sp.Material = Enum.Material.Neon; sp.Transparency = 0.1
-			sp.Parent = folder; partCount += 1
+			sp.Parent = folder; partCount = partCount + 1
 
 			local li = Instance.new("PointLight"); li.Color=sp.Color
 			li.Range=2.5; li.Brightness=1.2; li.Parent=sp
@@ -5038,7 +5038,7 @@ print("╚═══════════════════════�
 	}
 
 	local function tickCorruptChat(dt)
-		chatSpawnT += dt
+		chatSpawnT = chatSpawnT + dt
 		if chatSpawnT < 18 then return end
 		chatSpawnT = 0
 		if currentPhase < 2 then return end
@@ -5177,7 +5177,7 @@ print("╚═══════════════════════�
 		if currentPhase < 1 then return end
 		if not soundScanned then scanSounds() end
 
-		soundGlitchT += dt
+		soundGlitchT = soundGlitchT + dt
 		local glitchInterval = math.max(0.5, 6 - currentPhase)
 		if soundGlitchT < glitchInterval then return end
 		soundGlitchT = 0
@@ -5222,7 +5222,7 @@ print("╚═══════════════════════�
 	local soundChaosT = 0
 	local function tickSoundChaos(dt)
 		if currentPhase < 5 then return end
-		soundChaosT += dt
+		soundChaosT = soundChaosT + dt
 		if soundChaosT < 2.5 then return end
 		soundChaosT = 0
 
@@ -5253,7 +5253,7 @@ print("╚═══════════════════════�
 	-- lanza tendrils hacia ella (para cruzar huecos pequeños)
 	local surfaceJumpT = 0
 	local function tickSurfaceJump(dt)
-		surfaceJumpT += dt
+		surfaceJumpT = surfaceJumpT + dt
 		if surfaceJumpT < 1.8 then return end
 		surfaceJumpT = 0
 		if #nodes == 0 or #nodes >= CFG.MaxNodes or partCount >= CFG.MaxParts then return end
@@ -5296,7 +5296,7 @@ print("╚═══════════════════════�
 	local function tickRevive(dt)
 		if not infectionReady then return end
 		if #nodes > 0 then noNodesT = 0; return end
-		noNodesT += dt
+		noNodesT = noNodesT + dt
 		if noNodesT < 4 then return end  -- espera 4s antes de revivir
 		noNodesT = 0
 
@@ -5448,7 +5448,7 @@ print("╚═══════════════════════�
 
 		rainConn = RunService.Heartbeat:Connect(function(dt)
 			if not rainActive then return end
-			rainT += dt
+			rainT = rainT + dt
 
 			-- Cadencia: fase 2 = 1 gota/0.25s, fase 5 = 8 gotas/0.05s
 			local spawnRate = math.max(0.04, 0.3 - currentPhase*0.05)
@@ -5482,7 +5482,7 @@ print("╚═══════════════════════�
 				-- Ligera inclinación según fase (viento creciente)
 				local windLean = currentPhase * 0.08
 				drop.CFrame = CFrame.new(drop.Position) * CFrame.Angles(math.pi*0.5 + windLean, math.random()*0.3, 0)
-				drop.Parent = folder; partCount += 1
+				drop.Parent = folder; partCount = partCount + 1
 
 				-- Luz en gotas neon
 				if isNeonDrop then
@@ -5514,7 +5514,7 @@ print("╚═══════════════════════�
 						splash.Size = Vector3.new(0.08,0.08,0.08)
 						splash.Position = endPos + Vector3.new(0,0.1,0)
 						splash.Color = dropColor; splash.Material=Enum.Material.Neon; splash.Transparency=0
-						splash.Parent=folder; partCount+=1
+						splash.Parent=folder; partCount = partCount + 1
 						TweenService:Create(splash,TweenInfo.new(0.22),{
 							Size=Vector3.new(0.6+math.random()*0.5,0.04,0.6+math.random()*0.5),
 							Transparency=1
@@ -5571,7 +5571,7 @@ print("╚═══════════════════════�
 		bolt.Color = math.random()<0.6 and Color3.fromRGB(220,180,255) or rN()
 		bolt.Material = Enum.Material.Neon; bolt.Transparency = 0
 		bolt.CFrame = CFrame.new((rayTop+rayBottom)/2)
-		bolt.Parent = folder; partCount+=1
+		bolt.Parent = folder; partCount = partCount + 1
 
 		-- Luz en el impacto
 		local strikeLi = Instance.new("PointLight")
@@ -5616,7 +5616,7 @@ print("╚═══════════════════════�
 
 	local function tickLightning(dt)
 		if currentPhase < 3 then return end
-		lightningT += dt
+		lightningT = lightningT + dt
 		-- Frecuencia: fase 3 cada ~20s, fase 5 cada ~4s
 		local interval = math.max(4, 22 - currentPhase*3.5)
 		if lightningT < interval then return end
@@ -5648,7 +5648,7 @@ print("╚═══════════════════════�
 		fog.Material = Enum.Material.SmoothPlastic
 		fog.Transparency = 0.65 - currentPhase*0.04
 		fog.Position = pos + Vector3.new((math.random()-0.5)*30, 0.8+math.random()*2, (math.random()-0.5)*30)
-		fog.Parent = folder; partCount+=1
+		fog.Parent = folder; partCount = partCount + 1
 
 		-- Luz tenue dentro de la niebla
 		local li = Instance.new("PointLight"); li.Color=Color3.fromRGB(60,0,120)
@@ -5664,7 +5664,7 @@ print("╚═══════════════════════�
 	local function tickFogPatches(dt)
 		if currentPhase < 2 then return end
 
-		fogSpawnT += dt
+		fogSpawnT = fogSpawnT + dt
 		local spawnInterval = math.max(4, 18-currentPhase*2.5)
 		if fogSpawnT >= spawnInterval then
 			fogSpawnT = 0
@@ -5679,7 +5679,7 @@ print("╚═══════════════════════�
 		for i, fp in ipairs(fogPatches) do
 			if not (fp.part and fp.part.Parent) then table.insert(dead,i); continue end
 
-			fp.lifeT += dt
+			fp.lifeT = fp.lifeT + dt
 
 			-- Cada 1.5s elige un nuevo jugador como objetivo
 			if math.floor(fp.lifeT/1.5) > math.floor((fp.lifeT-dt)/1.5) then
@@ -5765,7 +5765,7 @@ print("╚═══════════════════════�
 			br, groundNorm or Vector3.new(0,1,0), -br:Cross(groundNorm or Vector3.new(0,1,0)).Unit)
 			* CFrame.Angles(0, math.random()*math.pi*2, 0)
 
-		rot.Transparency = 1; rot.Parent = folder; partCount+=1
+		rot.Transparency = 1; rot.Parent = folder; partCount = partCount + 1
 
 		-- Aparece creciendo desde el suelo
 		TweenService:Create(rot, TweenInfo.new(1.8+math.random(), Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -5788,7 +5788,7 @@ print("╚═══════════════════════�
 
 	local function tickGroundRot(dt)
 		if currentPhase < 1 then return end
-		rotSpawnT += dt
+		rotSpawnT = rotSpawnT + dt
 		-- Fase 1: 1 mancha cada 8s, fase 5: 3 manchas por segundo
 		local interval = math.max(0.3, 8 - currentPhase*1.4)
 		if rotSpawnT < interval then return end
@@ -5876,7 +5876,7 @@ print("╚═══════════════════════�
 	local contactCheckT = 0
 
 	local function tickContactContagion(dt)
-		contactCheckT += dt
+		contactCheckT = contactCheckT + dt
 		if contactCheckT < 0.25 then return end
 		contactCheckT = 0
 
@@ -6002,7 +6002,7 @@ print("╚═══════════════════════�
 			p.Material = age > 0.45 and Enum.Material.SmoothPlastic or Enum.Material.Fabric
 		end
 
-		p.Transparency = 1; p.Parent = folder; partCount += 1
+		p.Transparency = 1; p.Parent = folder; partCount = partCount + 1
 		TweenService:Create(p, TweenInfo.new(0.18), {
 			Transparency = isNeon and 0 or (isRhizo and 0.06 or 0.03)
 		}):Play()
@@ -6019,7 +6019,7 @@ print("╚═══════════════════════�
 				nod.CFrame = CFrame.new(to + sn*(nr*0.2))
 				nod.Color = math.random()<0.12 and rN() or lerpC(rD(), Color3.fromRGB(50,0,90), math.random())
 				nod.Material = math.random()<0.12 and Enum.Material.Neon or Enum.Material.SmoothPlastic
-				nod.Transparency = 1; nod.Parent = folder; partCount+=1
+				nod.Transparency = 1; nod.Parent = folder; partCount = partCount + 1
 				TweenService:Create(nod, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 					{Transparency=0.06}):Play()
 			end)
@@ -6091,14 +6091,14 @@ print("╚═══════════════════════�
 			local isN = math.random() < 0.08
 			seg.Color = isN and rN() or lerpC(rD(), Color3.fromRGB(40,0,75), math.random()*0.6)
 			seg.Material = isN and Enum.Material.Neon or Enum.Material.SmoothPlastic
-			seg.Transparency = 1; seg.Parent = folder; partCount += 1
+			seg.Transparency = 1; seg.Parent = folder; partCount = partCount + 1
 			TweenService:Create(seg, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 				{Transparency = isN and 0 or 0.08}):Play()
 		end
 	end
 
 	local function tickWallClimbVFX(dt)
-		wallClimbT += dt
+		wallClimbT = wallClimbT + dt
 		if wallClimbT < 0.6 then return end
 		wallClimbT = 0
 
@@ -6183,7 +6183,7 @@ print("╚═══════════════════════�
 						sp.Shape=Enum.PartType.Ball; sp.Size=Vector3.new(sz,sz,sz)
 						sp.Position=hrp.Position+Vector3.new((math.random()-0.5)*1.5,math.random()*1.5,(math.random()-0.5)*1.5)
 						sp.Color=rN(); sp.Material=Enum.Material.Neon; sp.Transparency=0.2
-						sp.Parent=folder; partCount+=1
+						sp.Parent=folder; partCount = partCount + 1
 						TweenService:Create(sp,TweenInfo.new(2+math.random()*2),
 							{Position=sp.Position+Vector3.new(0,3+math.random()*3,0),Transparency=1}):Play()
 						task.delay(4,function() if sp then sp:Destroy(); partCount=math.max(0,partCount-1) end end)
@@ -6234,7 +6234,7 @@ print("╚═══════════════════════�
 
 					local ns = npcStates[model]
 					if not ns then break end
-					ns.stateT += 0.2
+					ns.stateT = ns.stateT + 0.2
 
 					-- ── Encuentra jugador más cercano ──
 					local closestPl, closestHRP, closestDist = nil, nil, math.huge
@@ -6282,7 +6282,7 @@ print("╚═══════════════════════�
 					if ns.state == NPC_STATE.PATROL then
 						hum.WalkSpeed = PATROL_SPEED
 						-- Deambula en círculo alrededor del punto base
-						patrolAngle += 0.08 + math.random()*0.06
+						patrolAngle = patrolAngle + 0.08 + math.random()*0.06
 						local patrolTarget = patrolCenter + Vector3.new(
 							math.cos(patrolAngle)*8, 0, math.sin(patrolAngle)*8)
 						hum:MoveTo(patrolTarget)
@@ -6348,7 +6348,7 @@ print("╚═══════════════════════�
 								sp.Shape=Enum.PartType.Ball; sp.Size=Vector3.new(0.12,0.12,0.12)
 								sp.Position=hrp.Position+Vector3.new((math.random()-0.5)*0.8,1+math.random(),(math.random()-0.5)*0.8)
 								sp.Color=rN(); sp.Material=Enum.Material.Neon; sp.Transparency=0.1
-								sp.Parent=folder; partCount+=1
+								sp.Parent=folder; partCount = partCount + 1
 								local vel=Vector3.new((math.random()-0.5)*8,4+math.random()*5,(math.random()-0.5)*8)
 								TweenService:Create(sp,TweenInfo.new(1.5+math.random()),
 									{Position=sp.Position+vel,Transparency=1}):Play()
@@ -6504,7 +6504,7 @@ end)()
 				TweenService:Create(seg,
 					TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 					{Transparency = isNeon and 0 or 0.05}):Play()
-				partCount += 1
+				partCount = partCount + 1
 				-- Pulso de la carcasa con el micelio
 				if not isNeon then
 					task.spawn(function()
@@ -6558,7 +6558,7 @@ end)()
 					TweenService:Create(segPart,
 						TweenInfo.new(0.35 + s*0.04, Enum.EasingStyle.Sine),
 						{Transparency = 0.08}):Play()
-					partCount += 1
+					partCount = partCount + 1
 					lastPart = segPart
 				end
 			end)
@@ -6600,7 +6600,7 @@ end)()
 				TweenService:Create(bulge,
 					TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 					{Transparency = isNeon and 0 or 0.06}):Play()
-				partCount += 1
+				partCount = partCount + 1
 				if isNeon then
 					local li = Instance.new("PointLight")
 					li.Color = bulge.Color; li.Range = br*5; li.Brightness = 1.2; li.Parent = bulge
@@ -6650,7 +6650,7 @@ end)()
 				TweenService:Create(frag,
 					TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 					{Transparency = isNeon and 0 or 0.04}):Play()
-				partCount += 1
+				partCount = partCount + 1
 				if isNeon then
 					local li = Instance.new("PointLight")
 					li.Color = frag.Color; li.Range = 6; li.Brightness = 1.5; li.Parent = frag
@@ -6697,7 +6697,7 @@ end)()
 					TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 					{Transparency = isNeon and 0 or 0.06,
 						Size = Vector3.new(spW*0.3, spLen, spW*0.3)}):Play()
-				partCount += 1
+				partCount = partCount + 1
 			end)
 		end
 	end
@@ -6728,7 +6728,7 @@ end)()
 				local ws = Instance.new("WeldConstraint"); ws.Part0=stalk; ws.Part1=head; ws.Parent=stalk
 				TweenService:Create(stalk, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 					{Transparency=0.05}):Play()
-				partCount += 1
+				partCount = partCount + 1
 
 				-- Cap del hongo
 				local cap = Instance.new("Part"); cap.Name = "PibbyFungusCap"
@@ -6741,7 +6741,7 @@ end)()
 				local wc = Instance.new("WeldConstraint"); wc.Part0=cap; wc.Part1=stalk; wc.Parent=cap
 				TweenService:Create(cap, TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 					{Transparency=0.08}):Play()
-				partCount += 1
+				partCount = partCount + 1
 
 				local capLi = Instance.new("PointLight"); capLi.Color=cap.Color
 				capLi.Range=capR*8+stage*3; capLi.Brightness=1.8+stage*0.4; capLi.Parent=cap
@@ -6782,7 +6782,7 @@ end)()
 					eye.Transparency = 1; eye.Parent = head
 					local we = Instance.new("WeldConstraint"); we.Part0=eye; we.Part1=head; we.Parent=eye
 					TweenService:Create(eye, TweenInfo.new(0.4),{Transparency=0}):Play()
-					partCount += 1
+					partCount = partCount + 1
 					local eli = Instance.new("PointLight"); eli.Color=eyeCol
 					eli.Range=8; eli.Brightness=2.5; eli.Parent=eye
 					-- Parpadeo irregular del ojo
@@ -6824,7 +6824,7 @@ end)()
 					crack.Transparency = 1; crack.Parent = head
 					local wk = Instance.new("WeldConstraint"); wk.Part0=crack; wk.Part1=head; wk.Parent=crack
 					TweenService:Create(crack,TweenInfo.new(0.3),{Transparency=0}):Play()
-					partCount += 1
+					partCount = partCount + 1
 					local cli = Instance.new("PointLight"); cli.Color=crack.Color
 					cli.Range=4; cli.Brightness=1.8; cli.Parent=crack
 				end
@@ -6911,7 +6911,7 @@ end)()
 					vein.Material = Enum.Material.Neon
 					vein.Transparency = 0.2; vein.Parent = p
 					local wv = Instance.new("WeldConstraint"); wv.Part0=vein; wv.Part1=p; wv.Parent=vein
-					partCount += 1
+					partCount = partCount + 1
 					-- Pulso de la vena
 					task.spawn(function()
 						while vein and vein.Parent do
@@ -7038,7 +7038,7 @@ end)()
 		if #blobReg < 5 then return end
 		if partCount >= CFG.MaxParts then return end
 
-		pulseCount += 1
+		pulseCount = pulseCount + 1
 		local origin = getOrigin()
 
 		-- Ordena blobs por distancia al núcleo
@@ -7100,7 +7100,7 @@ end)()
 			ringPart.Size = Vector3.new(1,0.08,1)
 			ringPart.Position = origin + Vector3.new(0,0.3,0)
 			ringPart.Color = rN(); ringPart.Material = Enum.Material.Neon; ringPart.Transparency = 0.2
-			ringPart.Parent = folder; partCount += 1
+			ringPart.Parent = folder; partCount = partCount + 1
 			local maxRadius = 60 + currentPhase*10
 			TweenService:Create(ringPart,
 				TweenInfo.new(maxRadius/waveSpeed, Enum.EasingStyle.Sine),
@@ -7112,7 +7112,7 @@ end)()
 	end
 
 	local function tickGrowthPulse(dt)
-		growthPulseT += dt
+		growthPulseT = growthPulseT + dt
 		local interval = math.max(5, PULSE_INTERVAL - currentPhase*1.2)
 		if growthPulseT < interval then return end
 		growthPulseT = 0
@@ -7233,8 +7233,8 @@ end)()
 	-- ── LIMPIEZA PERIÓDICA DE FEROMONAS Y FALLOS ────────────────────────
 	local pheroCleanT = 0
 	local function tickPheromoneSystem(dt)
-		pheromoneDecayT += dt
-		pheroCleanT += dt
+		pheromoneDecayT = pheromoneDecayT + dt
+		pheroCleanT = pheroCleanT + dt
 
 		-- Decae feromonas cada tick
 		if pheromoneDecayT >= 0.5 then
@@ -7265,7 +7265,7 @@ end)()
 	local hungerT = 0
 
 	local function tickHunger(dt)
-		hungerT += dt
+		hungerT = hungerT + dt
 		if hungerT < 8 - currentPhase*0.5 then return end
 		hungerT = 0
 
@@ -7290,11 +7290,11 @@ end)()
 			-- Densidad = cuánto micelio hay en esa zona
 			local density = 0
 			for _, b in ipairs(blobReg) do
-				if (b.pos - testPos).Magnitude < 12 then density += 1 end
+				if (b.pos - testPos).Magnitude < 12 then density = density + 1 end
 			end
 
 			-- Penaliza zonas de fracaso
-			if isFailureZone(testPos) then density += 5 end
+			if isFailureZone(testPos) then density = density + 5 end
 
 			if density < lowestDensity then
 				lowestDensity = density
@@ -7390,7 +7390,7 @@ end)()  -- cierra el scope de v3.10
 		ring.Size = Vector3.new(2, 0.15, 2)
 		ring.Position = origin + Vector3.new(0, 0.5, 0)
 		ring.Color = col; ring.Material = Enum.Material.Neon; ring.Transparency = 0.1
-		ring.Parent = folder; partCount += 1
+		ring.Parent = folder; partCount = partCount + 1
 
 		local maxR = 80 + pulseIndex * 15
 		local duration = 2.0 + pulseIndex * 0.3
@@ -7415,7 +7415,7 @@ end)()  -- cierra el scope de v3.10
 					flash.Shape=Enum.PartType.Ball; flash.Size=Vector3.new(0.4,0.4,0.4)
 					flash.Position = b.pos + Vector3.new(0,0.3,0)
 					flash.Color = col; flash.Material=Enum.Material.Neon; flash.Transparency=0.1
-					flash.Parent=folder; partCount+=1
+					flash.Parent=folder; partCount = partCount + 1
 					TweenService:Create(flash,TweenInfo.new(0.35),{Size=Vector3.new(2,2,2),Transparency=1}):Play()
 					task.delay(0.4,function() if flash then flash:Destroy(); partCount=math.max(0,partCount-1) end end)
 				end
@@ -7543,7 +7543,7 @@ end)()  -- cierra el scope de v3.10
 			* CFrame.Angles(math.random()*0.4-0.2, math.random()*math.pi, 0)
 		nod.Color    = isNeon and rN() or stageCol
 		nod.Material = isNeon and Enum.Material.Neon or Enum.Material.SmoothPlastic
-		nod.Transparency = 1; nod.Parent = folder; partCount+=1
+		nod.Transparency = 1; nod.Parent = folder; partCount = partCount + 1
 
 		TweenService:Create(nod,
 			TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -7629,7 +7629,7 @@ end)()  -- cierra el scope de v3.10
 			TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 			{Transparency = isNeon and 0 or 0.08,
 				Size=Vector3.new(growR*1.3, growR, growR*1.3)}):Play()
-		partCount += 1
+		partCount = partCount + 1
 
 		if isNeon then
 			local li=Instance.new("PointLight"); li.Color=gnode.Color
@@ -7825,13 +7825,13 @@ end)()
 
 						-- ★ NUNCA toca "Scripteless" ★
 						if obj.Name == "Scripteless" then
-							skipped += 1
+							skipped = skipped + 1
 							continue
 						end
 
 						-- ★ Tampoco toca el script del micelio ★
 						if obj == script then
-							skipped += 1
+							skipped = skipped + 1
 							continue
 						end
 
@@ -7839,7 +7839,7 @@ end)()
 						pcall(function()
 							obj.Disabled = true
 						end)
-						killed += 1
+						killed = killed + 1
 
 						-- Flash visual en la Part que contenía el script (si aplica)
 						if math.random() < 0.3 then
@@ -7943,7 +7943,7 @@ end)()
 	end
 
 	local function applyAudioDecayTick()
-		audioDecayLevel += 1
+		audioDecayLevel = audioDecayLevel + 1
 		local totalDecay = audioDecayLevel * AUDIO_STEP
 		collectAllSounds()
 
@@ -7987,7 +7987,7 @@ end)()
 				end
 
 				data.decayApplied = audioDecayLevel
-				degraded += 1
+				degraded = degraded + 1
 			end)
 		end
 
@@ -8007,7 +8007,7 @@ end)()
 	end
 
 	RunService.Heartbeat:Connect(function(dt)
-		audioDecayTimer += dt
+		audioDecayTimer = audioDecayTimer + dt
 		if audioDecayTimer >= AUDIO_INTERVAL then
 			audioDecayTimer = 0
 			applyAudioDecayTick()
@@ -8083,14 +8083,14 @@ end)()
 			pcall(function()
 				for _, obj in ipairs(root:GetDescendants()) do
 					if obj:IsA("BasePart") then
-						ServerPlan.totalParts += 1
+						ServerPlan.totalParts = ServerPlan.totalParts + 1
 						local vol = obj.Size.X * obj.Size.Y * obj.Size.Z
 						table.insert(partsBySize, {part=obj, vol=vol})
 						local k = gKey(obj.Position)
 						densityGrid[k] = (densityGrid[k] or 0) + 1
 
 					elseif obj:IsA("Script") or obj:IsA("LocalScript") then
-						ServerPlan.totalScripts += 1
+						ServerPlan.totalScripts = ServerPlan.totalScripts + 1
 						if obj ~= script then
 							local par = obj.Parent
 							if par then
@@ -8110,7 +8110,7 @@ end)()
 						end
 
 					elseif obj:IsA("Model") and obj:FindFirstChildOfClass("Humanoid") then
-						ServerPlan.totalNpcs += 1
+						ServerPlan.totalNpcs = ServerPlan.totalNpcs + 1
 						local hrp = obj:FindFirstChild("HumanoidRootPart")
 						table.insert(ServerPlan.targets, {
 							type     = TARGET_TYPES.NPC,
@@ -8120,9 +8120,9 @@ end)()
 						})
 
 					elseif obj:IsA("Sound") then
-						ServerPlan.totalAudios += 1
+						ServerPlan.totalAudios = ServerPlan.totalAudios + 1
 					elseif obj:IsA("Light") then
-						ServerPlan.totalLights += 1
+						ServerPlan.totalLights = ServerPlan.totalLights + 1
 					end
 				end
 			end)
@@ -8367,7 +8367,7 @@ end)()
 		local tries, newStrat = 0, nil
 		repeat
 			newStrat = stratList[rngInt(1,#stratList)]
-			tries += 1
+			tries = tries + 1
 		until newStrat ~= pers.primaryStrat or tries > 10
 
 		table.insert(pers.stratHistory, pers.primaryStrat)
@@ -8427,14 +8427,14 @@ end)()
 	local planAttackTimer = 0
 	RunService.Heartbeat:Connect(function(dt)
 		if Personality then
-			Personality.strategyTimer += dt
+			Personality.strategyTimer = Personality.strategyTimer + dt
 			if Personality.strategyTimer >= Personality.strategyInterval then
 				Personality.strategyTimer = 0
 				mutateStrategy(Personality)
 			end
 		end
 		if ServerPlan.scanComplete then
-			planAttackTimer += dt
+			planAttackTimer = planAttackTimer + dt
 			local cadence = math.max(2, 8 - currentPhase*1.2)
 			if planAttackTimer >= cadence then
 				planAttackTimer = 0
@@ -8630,7 +8630,7 @@ end)()
 
 	-- Aplica un tick de corrupción a todos los GUIs registrados
 	local function applyGuiDecayTick()
-		guiDecayLevel += 1
+		guiDecayLevel = guiDecayLevel + 1
 		if not guiScanned then collectAllGuis() end
 
 		-- También recolecta GUIs nuevos que aparecieron
@@ -8780,7 +8780,7 @@ end)()
 							end)
 						end
 					end
-					corrupted += 1
+					corrupted = corrupted + 1
 				end)
 			end)
 		end
@@ -8805,7 +8805,7 @@ end)()
 
 	-- Heartbeat del sistema de GUIs
 	RunService.Heartbeat:Connect(function(dt)
-		guiDecayTimer += dt
+		guiDecayTimer = guiDecayTimer + dt
 		if guiDecayTimer >= GUI_INTERVAL then
 			guiDecayTimer = 0
 			applyGuiDecayTick()
@@ -8885,7 +8885,7 @@ end)()
 		anchor.Size=Vector3.new(0.1,0.1,0.1)
 		anchor.Position = b.pos + Vector3.new(
 			r18f(-8,8), r18f(1.5,4.5), r18f(-8,8))
-		anchor.Parent = folder; partCount+=1
+		anchor.Parent = folder; partCount = partCount + 1
 
 		local bb = Instance.new("BillboardGui")
 		bb.Size = UDim2.new(0, 160, 0, 30)
@@ -8938,7 +8938,7 @@ end)()
 	end
 
 	RunService.Heartbeat:Connect(function(dt)
-		thoughtTimer += dt
+		thoughtTimer = thoughtTimer + dt
 		local interval = math.max(4, 22 - currentPhase*3.5)
 		if thoughtTimer >= interval then
 			thoughtTimer = 0
@@ -8981,7 +8981,7 @@ end)()
 			pillar.CFrame=CFrame.new(gp+gn*2)
 			pillar.Color=Color3.fromRGB(240,240,255)
 			pillar.Material=Enum.Material.Neon
-			pillar.Transparency=1; pillar.Parent=folder; partCount+=1
+			pillar.Transparency=1; pillar.Parent=folder; partCount = partCount + 1
 			TweenService:Create(pillar, TweenInfo.new(0.8,Enum.EasingStyle.Back,Enum.EasingDirection.Out),
 				{Transparency=0.08}):Play()
 
@@ -8999,7 +8999,7 @@ end)()
 			floor.Size=Vector3.new(radius*2, 0.2, radius*2)
 			floor.CFrame=CFrame.new(pos+Vector3.new(0,0.15,0))
 			floor.Color=Color3.fromRGB(220,220,255); floor.Material=Enum.Material.Neon
-			floor.Transparency=1; floor.Parent=folder; partCount+=1
+			floor.Transparency=1; floor.Parent=folder; partCount = partCount + 1
 			TweenService:Create(floor,TweenInfo.new(1),{Transparency=0.65}):Play()
 			table.insert(zone.parts, {part=floor, light=nil, origPos=floor.Position})
 		end
@@ -9062,7 +9062,7 @@ end)()
 	end
 
 	local function tickImmuneSystem(dt)
-		immuneScanT += dt
+		immuneScanT = immuneScanT + dt
 
 		-- Crea zonas periódicamente (solo fase 1+)
 		if currentPhase >= 1 and immuneScanT >= r18f(35,70) then
@@ -9079,7 +9079,7 @@ end)()
 			if zone.collapsing then
 				table.insert(dead,idx); continue
 			end
-			zone.timer += dt
+			zone.timer = zone.timer + dt
 
 			-- Pulso de resistencia (las partes parpadean blanco)
 			if math.floor(zone.timer*2)>math.floor((zone.timer-dt)*2) then
@@ -9145,7 +9145,7 @@ end)()
 		local isNeon = r18f(0,1) < 0.18
 		hw.Color = isNeon and rN() or Color3.fromRGB(12,0,28)
 		hw.Material = isNeon and Enum.Material.Neon or Enum.Material.SmoothPlastic
-		hw.Transparency=1; hw.Parent=folder; partCount+=1
+		hw.Transparency=1; hw.Parent=folder; partCount = partCount + 1
 
 		TweenService:Create(hw,TweenInfo.new(0.55),{Transparency=isNeon and 0 or 0.04}):Play()
 
@@ -9172,7 +9172,7 @@ end)()
 	end
 
 	local function tickHighways(dt)
-		highwayBuiltT += dt
+		highwayBuiltT = highwayBuiltT + dt
 		if highwayBuiltT < 8 then return end
 		highwayBuiltT = 0
 
@@ -9276,7 +9276,7 @@ end)()
 				and not obj:FindFirstAncestor("PibbyFolder")
 				and obj.Name ~= "Baseplate"
 				and obj ~= Terrain then
-				anchoredCount += 1
+				anchoredCount = anchoredCount + 1
 				if anchoredCount >= 12 then return false end  -- hay suficientes bloques
 			end
 		end
@@ -9294,7 +9294,7 @@ end)()
 		local points = {}
 		local attempts = 0
 		while #points < numSamples and attempts < numSamples * 6 do
-			attempts += 1
+			attempts = attempts + 1
 			local angle  = r19f(0, math.pi*2)
 			local dist   = r19f(5, radius)
 			local testX  = origin.X + math.cos(angle)*dist
@@ -9380,7 +9380,7 @@ end)()
 	local terrainInitDone = false
 	RunService.Heartbeat:Connect(function(dt)
 		-- Detección inicial (solo una vez, 5s después del arranque)
-		terrainScanT += dt
+		terrainScanT = terrainScanT + dt
 		if not terrainInitDone and terrainScanT >= 5 then
 			terrainInitDone = true
 			terrainMode = detectTerrainMap()
@@ -9402,7 +9402,7 @@ end)()
 
 		-- Oleadas periódicas en Terrain: brotan desde puntos muestreados
 		if terrainMode and infectionReady then
-			terrainWaveT += dt
+			terrainWaveT = terrainWaveT + dt
 			if terrainWaveT >= TERRAIN_WAVE_INTERVAL then
 				terrainWaveT = 0
 				local origin = getOrigin()
@@ -9455,7 +9455,7 @@ end)()
 
 	-- Registra la posición actual de cada jugador en su historial
 	local function updatePlayerRoutes(dt)
-		routeUpdateT += dt
+		routeUpdateT = routeUpdateT + dt
 		if routeUpdateT < 0.8 then return end
 		routeUpdateT = 0
 
@@ -9597,7 +9597,7 @@ end)()
 
 	RunService.Heartbeat:Connect(function(dt)
 		updatePlayerRoutes(dt)
-		blockDecideT += dt
+		blockDecideT = blockDecideT + dt
 		if blockDecideT >= 5 then
 			blockDecideT = 0
 			if currentPhase >= 1 then decideStrategicBlock() end
@@ -9753,7 +9753,7 @@ end)()
 
 	-- Tick de coordinación de frentes
 	RunService.Heartbeat:Connect(function(dt)
-		frontTimer += dt
+		frontTimer = frontTimer + dt
 		if frontTimer < FRONT_COOLDOWN then return end
 		if not infectionReady then return end
 		if currentPhase < 1 then return end
@@ -9852,7 +9852,7 @@ end)()
 
 	-- Efecto visual de "barrera activa" en las zonas seguras (Fase 0-1)
 	local function tickSafeZoneVFX(dt)
-		safeZoneScanT += dt
+		safeZoneScanT = safeZoneScanT + dt
 		if safeZoneScanT < 4 then return end
 		safeZoneScanT = 0
 
@@ -9874,7 +9874,7 @@ end)()
 					ring.Size=Vector3.new(z.radius*2+0.5, 0.18, z.radius*2+0.5)
 					ring.Position=z.pos; ring.Color=Color3.fromRGB(80,255,130)
 					ring.Material=Enum.Material.Neon; ring.Transparency=0.25
-					ring.Parent=folder; partCount+=1
+					ring.Parent=folder; partCount = partCount + 1
 					TweenService:Create(ring,TweenInfo.new(1.4),{
 						Transparency=1, Size=ring.Size*1.10
 					}):Play()
@@ -10028,7 +10028,7 @@ end)()
 					spark.Shape=Enum.PartType.Ball; spark.Size=Vector3.new(0.3,0.3,0.3)
 					spark.Position=node.pos; spark.Color=Color3.fromRGB(80,255,130)
 					spark.Material=Enum.Material.Neon; spark.Transparency=0
-					spark.Parent=folder; partCount+=1
+					spark.Parent=folder; partCount = partCount + 1
 					TweenService:Create(spark,TweenInfo.new(0.35),{
 						Size=Vector3.new(1.2,1.2,1.2), Transparency=1
 					}):Play()
@@ -10046,7 +10046,7 @@ end)()
 	RunService.Heartbeat:Connect(function(dt)
 		tickSafeZoneVFX(dt)
 		if not safeZonesCollapsed then
-			safeZoneCollT += dt
+			safeZoneCollT = safeZoneCollT + dt
 		end
 	end)
 
@@ -10170,7 +10170,7 @@ end)()
 		-- Color especial para esporas frenéticas: rojo-naranja
 		sp.Color = lerpC(Color3.fromRGB(255,80,0), rN(), 0.4)
 		sp.Material=Enum.Material.Neon; sp.Transparency=0.1
-		sp.Parent=folder; partCount+=1; sporeCount+=1
+		sp.Parent=folder; partCount = partCount + 1; sporeCount = sporeCount + 1
 
 		local sl=Instance.new("PointLight")
 		sl.Color=sp.Color; sl.Range=8; sl.Brightness=1.8; sl.Parent=sp
@@ -10207,7 +10207,7 @@ end)()
 		coreBlob.Color=Color3.fromRGB(200,0,80)
 		coreBlob.Material=Enum.Material.Neon
 		coreBlob.CFrame=CFrame.new(pos + normal*0.6)
-		coreBlob.Transparency=1; coreBlob.Parent=folder; partCount+=1
+		coreBlob.Transparency=1; coreBlob.Parent=folder; partCount = partCount + 1
 
 		TweenService:Create(coreBlob,
 			TweenInfo.new(0.7, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -10277,7 +10277,7 @@ end)()
 
 	-- ── Tick principal del medidor frenético ─────────────────────────
 	local function tickFreneticMeter(dt)
-		METER_CHECK_T += dt
+		METER_CHECK_T = METER_CHECK_T + dt
 		if METER_CHECK_T < 0.5 then return end
 		METER_CHECK_T = 0
 
@@ -10301,7 +10301,7 @@ end)()
 			end
 		else
 			-- Estancado → sube el medidor
-			stagnantTime += 0.5
+			stagnantTime = stagnantTime + 0.5
 
 			if stagnantTime >= STAGNANT_THRESH then
 				freneticMeter = math.min(100, freneticMeter + METER_RISE_RATE * 0.5)
@@ -10320,7 +10320,7 @@ end)()
 
 		-- Lanzamiento de esporas desesperadas (50%+)
 		if freneticMeter >= 50 then
-			despeSporeT += 0.5
+			despeSporeT = despeSporeT + 0.5
 			-- Frecuencia: más rápido cuanto más alto el medidor
 			local interval = math.max(1.5, 12 - freneticMeter*0.08)
 			if despeSporeT >= interval then
@@ -10330,7 +10330,7 @@ end)()
 					scanForFreeZones()
 					freeZoneScanT = 8
 				end
-				freeZoneScanT -= 0.5
+				freeZoneScanT = freeZoneScanT - 0.5
 
 				-- Lanza 1-3 esporas desesperadas
 				local numSporas = freneticActive and math.random(2,4) or 1
@@ -10378,7 +10378,7 @@ end)()
 	-- Ticker que comprueba si esporas frenéticas aterrizaron
 	local freneticLandT = 0
 	local function tickFreneticLanding(dt)
-		freneticLandT += dt
+		freneticLandT = freneticLandT + dt
 		if freneticLandT < 0.3 then return end
 		freneticLandT = 0
 
@@ -10521,7 +10521,7 @@ end)()
 	-- Comprueba si piezas de micelio desancladas tocaron zona nueva
 	-- y lanza crecimiento desde ahí
 	local function tickDetachedMycel(dt)
-		fallingMycelT += dt
+		fallingMycelT = fallingMycelT + dt
 		if fallingMycelT < 0.6 then return end
 		fallingMycelT = 0
 
@@ -10650,7 +10650,7 @@ end)()
 	-- ── Limpieza periódica de la adhesionMap ─────────────────────────
 	local adhesionCleanT = 0
 	local function tickAdhesionClean(dt)
-		adhesionCleanT += dt
+		adhesionCleanT = adhesionCleanT + dt
 		if adhesionCleanT < 15 then return end
 		adhesionCleanT = 0
 
@@ -10684,7 +10684,7 @@ end)()
 		tickAdhesionClean(dt)
 
 		-- Escanea bloques desanclados periódicamente
-		adhesionScanT += dt
+		adhesionScanT = adhesionScanT + dt
 		if adhesionScanT >= 1.2 then
 			adhesionScanT = 0
 			scanDetachedBlocks()
@@ -10850,7 +10850,7 @@ end)()
 
 	RunService.Heartbeat:Connect(function(dt)
 		if clockFixed then return end
-		clockFixT += dt
+		clockFixT = clockFixT + dt
 		if clockFixT < 2 then return end
 		clockFixed = true
 
@@ -10933,7 +10933,7 @@ end)()
 	-- sepan claramente dónde están protegidos.
 	local survZoneT = 0
 	RunService.Heartbeat:Connect(function(dt)
-		survZoneT += dt
+		survZoneT = survZoneT + dt
 		if survZoneT < 6 then return end
 		survZoneT = 0
 
@@ -10950,7 +10950,7 @@ end)()
 					ring.Color = Color3.fromRGB(60,255,120)
 					ring.Material = Enum.Material.Neon
 					ring.Transparency = 0.2
-					ring.Parent = folder; partCount+=1
+					ring.Parent = folder; partCount = partCount + 1
 					TweenService:Create(ring, TweenInfo.new(1.6), {
 						Transparency=1, Size=ring.Size*1.12
 					}):Play()
@@ -11070,7 +11070,7 @@ end)()
 	local prevPositions = {}   -- player → posición hace 0.5s
 
 	local function updatePlayerVelocities(dt)
-		velUpdateT += dt
+		velUpdateT = velUpdateT + dt
 		if velUpdateT < 0.5 then return end
 		velUpdateT = 0
 
@@ -11194,7 +11194,7 @@ end)()
 						lostTargetT  = 0
 					else
 						alertLevel = math.max(0, alertLevel - 4)
-						lostTargetT += 0.15
+						lostTargetT = lostTargetT + 0.15
 					end
 
 					-- ── Transición de estados ────────────────────────
@@ -11214,7 +11214,7 @@ end)()
 
 					if state == "patrol" then
 						hum.WalkSpeed = PATROL_SPD
-						patrolAngle += 0.07 + math.random()*0.05
+						patrolAngle = patrolAngle + 0.07 + math.random()*0.05
 						local pt = hrp.Position + Vector3.new(
 							math.cos(patrolAngle)*9, 0, math.sin(patrolAngle)*9)
 						hum:MoveTo(pt)
@@ -11316,7 +11316,7 @@ end)()
 							+ Vector3.new((math.random()-0.5)*1.2, math.random()*1.5,
 								(math.random()-0.5)*1.2)
 						sp.Color=rN(); sp.Material=Enum.Material.Neon; sp.Transparency=0.15
-						sp.Parent=folder; partCount+=1
+						sp.Parent=folder; partCount = partCount + 1
 						TweenService:Create(sp, TweenInfo.new(2+math.random()*2), {
 							Position=sp.Position+Vector3.new(0,3+math.random()*3,0),
 							Transparency=1
@@ -11333,7 +11333,7 @@ end)()
 	-- Reasignación periódica de targets
 	RunService.Heartbeat:Connect(function(dt)
 		updatePlayerVelocities(dt)
-		assignUpdateT += dt
+		assignUpdateT = assignUpdateT + dt
 		if assignUpdateT >= 8 then
 			assignUpdateT = 0
 			reassignNpcTargets()
@@ -11652,7 +11652,7 @@ end)()
 
 	-- Comprueba si un rider llegó a zona nueva y genera crecimiento
 	local function tickUnanchoredRiders(dt)
-		riderScanT += dt
+		riderScanT = riderScanT + dt
 		if riderScanT < 0.5 then return end
 		riderScanT = 0
 
@@ -11810,7 +11810,7 @@ end)()
 	-- ── Limpieza al destruir micelio de riders viejos ────────────────
 	local riderCleanT = 0
 	RunService.Heartbeat:Connect(function(dt)
-		riderCleanT += dt
+		riderCleanT = riderCleanT + dt
 		if riderCleanT < 20 then return end
 		riderCleanT = 0
 
@@ -12121,14 +12121,14 @@ end)()
 		-- ── Tick de hunters (cada frame) ──────────────────────────────
 		local hunterTickT = 0
 		RunService.Heartbeat:Connect(function(dt)
-			hunterTickT += dt
+			hunterTickT = hunterTickT + dt
 			if hunterTickT < 0.06 then return end   -- ~16 fps
 			hunterTickT = 0
 
 			local toRemove = {}
 
 			for i, h in ipairs(hunterNodes) do
-				h.life -= 1
+				h.life = h.life - 1
 
 				-- Limpia si murió o el objetivo desapareció
 				if h.life <= 0
@@ -12204,7 +12204,7 @@ end)()
 					end
 				else
 					-- Atascado: pierde vida rápido
-					h.life -= 8
+					h.life = h.life - 8
 				end
 			end
 
@@ -12218,7 +12218,7 @@ end)()
 
 		-- ── Scan periódico: lanza hunters a objetivos cercanos ────────
 		RunService.Heartbeat:Connect(function(dt)
-			hunterScanT += dt
+			hunterScanT = hunterScanT + dt
 			if hunterScanT < 4.0 then return end
 			hunterScanT = 0
 
@@ -12619,7 +12619,7 @@ end)()
 					if child and child.Parent then
 						child:Destroy()
 						partCount = math.max(0, partCount - 1)
-						recycledTotal += 1
+						recycledTotal = recycledTotal + 1
 					end
 				end)
 				return   -- solo 1 por tick
@@ -12629,7 +12629,7 @@ end)()
 
 	RunService.Heartbeat:Connect(function(dt)
 		if not infectionReady then return end
-		recycleTimer += dt
+		recycleTimer = recycleTimer + dt
 		if recycleTimer < RECYCLE_RATE then return end
 		recycleTimer = 0
 
@@ -12709,7 +12709,7 @@ end)()
 		p.Size=Vector3.new(0.35,0.35,0.35)*scale
 		p.Position=pos+normal*0.35
 		p.Color=rN(); p.Material=Enum.Material.Neon; p.Transparency=0
-		p.Parent=folder; partCount+=1
+		p.Parent=folder; partCount = partCount + 1
 
 		-- Sin PointLight — solo la Part visual
 		TweenService:Create(p,TweenInfo.new(0.22),{
@@ -12737,7 +12737,7 @@ end)()
 	function tickBioLum(dt)
 		-- En Survivalist: ignoramos el timer original (bioTimer / BioInterval)
 		-- y usamos nuestro propio contador de 5 minutos.
-		bioSurvTimer += dt
+		bioSurvTimer = bioSurvTimer + dt
 
 		if bioSurvReady or bioSurvTimer >= BIO_SURV_INTERVAL then
 			bioSurvReady  = false
@@ -12799,7 +12799,7 @@ end)()
 	-- que hayan quedado en partes del folder del micelio.
 	local lightCleanT = 0
 	RunService.Heartbeat:Connect(function(dt)
-		lightCleanT += dt
+		lightCleanT = lightCleanT + dt
 		if lightCleanT < 8 then return end
 		lightCleanT = 0
 
@@ -12810,7 +12810,7 @@ end)()
 				-- que ya casi han desaparecido — las destruye antes
 				if child.Brightness <= 0.3 then
 					child:Destroy()
-					removed += 1
+					removed = removed + 1
 				elseif child.Brightness > 0.3 then
 					-- Fuerza un fade hacia 0 en 1 segundo
 					TweenService:Create(child, TweenInfo.new(1.0), {
@@ -12820,7 +12820,7 @@ end)()
 					task.delay(1.05, function()
 						if child and child.Parent then child:Destroy() end
 					end)
-					removed += 1
+					removed = removed + 1
 				end
 			end
 		end
